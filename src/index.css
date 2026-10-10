@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: #081510;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(35, 89, 66, 0.35) 0%, transparent 60%),
+      radial-gradient(circle at 10% 80%, rgba(92, 20, 28, 0.25) 0%, transparent 50%),
+      radial-gradient(circle at 90% 90%, rgba(212, 175, 55, 0.08) 0%, transparent 40%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+}
+
+/* Custom festive scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #081510;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e4536;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #d4af37;
+}
+
+/* 3D card perspective for flip animations */
+.perspective-1000 {
+  perspective: 1000px;
+}
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Wax seal styling */
+.wax-seal {
+  background: radial-gradient(circle at 35% 35%, #b32638 0%, #7c1622 70%, #4a0d14 100%);
+  box-shadow: 
+    inset 0 2px 4px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.6),
+    0 8px 16px -2px rgba(0, 0, 0, 0.6);
+}
+
+/* Stamp effect */
+.stamp-reserved {
+  display: inline-block;
+  text-transform: uppercase;
+  font-family: 'Cinzel', serif;
+  font-weight: 800;
+  border: 3px dashed #b32638;
+  color: #b32638;
+  transform: rotate(-6deg);
+  mask-image: radial-gradient(circle, black 85%, transparent 100%);
+  text-shadow: 0 0 1px rgba(179, 38, 56, 0.5);
+  box-shadow: 0 0 0 3px rgba(179, 38, 56, 0.2);
+}
+
+/* Gold foil sheen effect */
+.gold-foil-text {
+  background: linear-gradient(135deg, #fce09b 0%, #d4af37 40%, #aa8217 70%, #ffd978 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-foil-border {
+  border-image: linear-gradient(135deg, #ffd700, #b8860b, #daa520) 1;
+}

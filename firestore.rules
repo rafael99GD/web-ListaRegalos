@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Función auxiliar para verificar si el usuario es Admin (Rafael)
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email.matches('(?i).*rafael.*') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    // Reglas para la colección de REGALOS
+    match /gifts/{giftId} {
+      // Cualquier persona puede leer los regalos (o filtrados por cliente)
+      allow read: if true;
+
+      // Solo el Admin puede crear o eliminar regalos
+      allow create, delete: if isAdmin();
+
+      // Reglas para actualizar un regalo (reservar o desmarcar)
+      allow update: if 
+        // 1. El Admin puede actualizar cualquier campo en cualquier momento
+        isAdmin() ||
+        
+        // 2. Un usuario autenticado marcando como comprado (si no estaba ya reservado)
+        (
+          request.auth != null &&
+          !resource.data.isReserved &&
+          request.resource.data.isReserved == true &&
+          request.resource.data.reservedBy == request.auth.uid
+        ) ||
+
+        // 3. Un usuario desmarcando/restaurando: SOLO si él mismo lo reservó previamente
+        (
+          request.auth != null &&
+          resource.data.isReserved == true &&
+          resource.data.reservedBy == request.auth.uid &&
+          request.resource.data.isReserved == false
+        );
+    }
+
+    // Reglas para la CARTA personal y configuración
+    match /config/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Reglas para la colección de USUARIOS
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+    }
+  }
+}
