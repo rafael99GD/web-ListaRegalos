@@ -8,12 +8,12 @@ import type { Firestore } from 'firebase/firestore';
 // Default configuration placeholder or environment variables
 // Rafael can fill this directly or use a .env file!
 export const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || ""
+  apiKey: "AIzaSyBl5P1fXtPEx22qJEEBuNy7xYCEVJr3at8",
+  authDomain: "listaderegalos-8e351.firebaseapp.com",
+  projectId: "listaderegalos-8e351",
+  storageBucket: "listaderegalos-8e351.firebasestorage.app",
+  messagingSenderId: "487618435291",
+  appId: "1:487618435291:web:15480106b4569a148b14fe"
 };
 
 // Check if credentials have been filled in

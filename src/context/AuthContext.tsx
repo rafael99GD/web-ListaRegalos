@@ -34,19 +34,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) || 'admin1234';
   });
 
-  // Subscribe to special users from Firestore / local storage
+  // Subscribe to special users and admin password from Firestore / local storage
   useEffect(() => {
-    const unsub = giftService.subscribeSpecialUsers((users) => {
+    const unsubUsers = giftService.subscribeSpecialUsers((users) => {
       setSpecialUsers(users);
     });
-    return () => unsub();
+    const unsubPass = giftService.subscribeAdminPassword((pass) => {
+      setAdminPasswordState(pass);
+    });
+    return () => {
+      unsubUsers();
+      unsubPass();
+    };
   }, []);
 
-  const setAdminPassword = (newPass: string) => {
+  const setAdminPassword = async (newPass: string) => {
     const trimmed = newPass.trim();
     if (!trimmed) return;
     setAdminPasswordState(trimmed);
-    localStorage.setItem(ADMIN_PASSWORD_STORAGE_KEY, trimmed);
+    await giftService.saveAdminPassword(trimmed);
   };
 
   const login = async (name: string, pass: string): Promise<{ success: boolean; message?: string }> => {

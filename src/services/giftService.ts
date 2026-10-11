@@ -326,5 +326,41 @@ export const giftService = {
       localStorage.setItem(LOCAL_STORAGE_SPECIAL_USERS_KEY, JSON.stringify(filtered));
       window.dispatchEvent(new Event('storage'));
     }
+  },
+
+  // Admin Password Management (Synced across all devices via Firestore)
+  subscribeAdminPassword(onPasswordUpdated: (pass: string) => void): () => void {
+    if (isFirebaseConfigured && db) {
+      try {
+        const authDoc = doc(db, 'config', 'auth');
+        const unsub = onSnapshot(authDoc, (snap) => {
+          if (snap.exists() && snap.data()?.password) {
+            onPasswordUpdated(snap.data().password);
+          } else {
+            setDoc(authDoc, { password: 'admin1234' });
+            onPasswordUpdated('admin1234');
+          }
+        });
+        return unsub;
+      } catch (err) {
+        console.warn('Error suscribiendo a admin password:', err);
+      }
+    }
+
+    const localPass = localStorage.getItem('lista_regalos_admin_pass_v3') || 'admin1234';
+    onPasswordUpdated(localPass);
+    return () => {};
+  },
+
+  async saveAdminPassword(newPassword: string): Promise<void> {
+    const trimmed = newPassword.trim();
+    if (!trimmed) return;
+
+    if (isFirebaseConfigured && db) {
+      const authDoc = doc(db, 'config', 'auth');
+      await setDoc(authDoc, { password: trimmed, updatedAt: new Date().toISOString() });
+    }
+
+    localStorage.setItem('lista_regalos_admin_pass_v3', trimmed);
   }
 };
