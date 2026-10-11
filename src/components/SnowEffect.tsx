@@ -102,3 +102,4 @@ export const SnowEffect: React.FC<SnowEffectProps> = ({ active }) => {
     />
   );
 };
+

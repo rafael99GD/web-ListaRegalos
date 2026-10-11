@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Gift as GiftIcon, X, Sparkles, AlertCircle, Undo2 } from 'lucide-react';
+import { Gift as GiftIcon, X, Sparkles, AlertCircle, Undo2, Lock } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { Gift } from '../types';
-import { useAuth } from '../context/AuthContext';
 import { sounds } from '../utils/audio';
 
 interface ReserveModalProps {
@@ -11,7 +10,7 @@ interface ReserveModalProps {
   mode: 'reserve' | 'unreserve';
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (gift: Gift, customBuyerName?: string) => Promise<void>;
+  onConfirm: (gift: Gift) => Promise<void>;
 }
 
 export const ReserveModal: React.FC<ReserveModalProps> = ({
@@ -21,8 +20,6 @@ export const ReserveModal: React.FC<ReserveModalProps> = ({
   onClose,
   onConfirm,
 }) => {
-  const { currentUser } = useAuth();
-  const [customName, setCustomName] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,8 +28,8 @@ export const ReserveModal: React.FC<ReserveModalProps> = ({
   const triggerCelebration = () => {
     sounds.playChime();
     confetti({
-      particleCount: 80,
-      spread: 70,
+      particleCount: 90,
+      spread: 75,
       origin: { y: 0.6 },
       colors: ['#D4AF37', '#B32638', '#235942', '#F3E5AB']
     });
@@ -40,14 +37,9 @@ export const ReserveModal: React.FC<ReserveModalProps> = ({
 
   const handleAction = async () => {
     setError(null);
-    if (mode === 'reserve' && !currentUser && !customName.trim()) {
-      setError('Por favor indica tu nombre o apodo para saber quién se pide el regalo.');
-      return;
-    }
-
     setSubmitting(true);
     try {
-      await onConfirm(gift, customName.trim());
+      await onConfirm(gift);
       if (mode === 'reserve') {
         triggerCelebration();
       } else {
@@ -90,10 +82,10 @@ export const ReserveModal: React.FC<ReserveModalProps> = ({
             </div>
             <div>
               <h3 className="font-serif font-bold text-xl text-festive-goldLight">
-                {mode === 'reserve' ? '¿Te pides este regalo?' : 'Restaurar regalo'}
+                {mode === 'reserve' ? '¿Vas a comprar este regalo?' : 'Reactivar regalo'}
               </h3>
               <p className="text-xs text-slate-300">
-                {mode === 'reserve' ? 'Se marcará como reservado para ti' : 'Volverá a estar disponible'}
+                {mode === 'reserve' ? 'Confirmación para evitar duplicados' : 'Función de Administrador'}
               </p>
             </div>
           </div>
@@ -118,43 +110,27 @@ export const ReserveModal: React.FC<ReserveModalProps> = ({
             </div>
           </div>
 
-          {/* Form instructions or buyer name input */}
+          {/* Important instructions */}
           {mode === 'reserve' ? (
-            <div className="space-y-3">
-              {currentUser ? (
-                <div className="p-3 bg-festive-forest/70 rounded-xl border border-festive-pine text-xs text-slate-300 space-y-1">
-                  <p>
-                    Se marcará como comprado por: <span className="font-bold text-festive-goldLight">{currentUser.displayName}</span>
-                  </p>
-                  <p className="text-[11px] text-slate-400">
-                    Así evitamos que otros familiares o amigos compren lo mismo.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-festive-goldLight">
-                    Tu nombre o apodo (ej: Mamá, Tía Carmen, Carlos...):
-                  </label>
-                  <input
-                    type="text"
-                    value={customName}
-                    onChange={(e) => setCustomName(e.target.value)}
-                    placeholder="Escribe tu nombre..."
-                    className="w-full px-4 py-2.5 bg-festive-forest border border-festive-pine rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-festive-gold"
-                  />
-                  <p className="text-[11px] text-slate-400">
-                    O si tienes una cuenta asignada, puedes iniciar sesión primero.
-                  </p>
-                </div>
-              )}
+            <div className="p-3.5 bg-festive-forest/80 rounded-2xl border border-festive-pine space-y-2 text-xs text-slate-300">
+              <div className="flex items-start gap-2">
+                <Lock className="w-4 h-4 text-festive-gold shrink-0 mt-0.5" />
+                <p className="leading-relaxed">
+                  <span className="font-bold text-festive-goldLight">Importante: </span>
+                  Al marcarlo, aparecerá como comprado para el resto de la familia y amigos para que nadie más lo compre.
+                </p>
+              </div>
+              <p className="text-[11px] text-amber-200/80 pl-6">
+                ⚠️ Una vez marcado <span className="underline">no podrás desmarcarlo tú</span>. Si te equivocas, tendrás que avisar a Rafael para que lo reactive.
+              </p>
             </div>
           ) : (
-            <div className="p-3 bg-festive-forest/70 rounded-xl border border-festive-pine text-xs text-slate-300">
+            <div className="p-3.5 bg-festive-forest/80 rounded-2xl border border-festive-pine text-xs text-slate-300">
               <p>
-                ¿Seguro que deseas desmarcar <span className="text-white font-semibold">"{gift.name}"</span>?
+                ¿Deseas restaurar <span className="text-white font-semibold">"{gift.name}"</span> a disponible?
               </p>
               <p className="text-[11px] text-slate-400 mt-1">
-                Cualquier otra persona de la familia podrá volver a reservarlo.
+                Volverá a aparecer como libre para que cualquier persona pueda comprarlo.
               </p>
             </div>
           )}
@@ -191,12 +167,12 @@ export const ReserveModal: React.FC<ReserveModalProps> = ({
               ) : mode === 'reserve' ? (
                 <>
                   <Sparkles className="w-4 h-4 text-festive-gold" />
-                  <span>¡Sí, me lo pido!</span>
+                  <span>¡Sí, lo he comprado!</span>
                 </>
               ) : (
                 <>
                   <Undo2 className="w-4 h-4" />
-                  <span>Sí, restaurar a no comprado</span>
+                  <span>Sí, reactivar regalo</span>
                 </>
               )}
             </button>

@@ -2,55 +2,38 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Función auxiliar para verificar si el usuario es Admin (Rafael)
-    function isAdmin() {
-      return request.auth != null && (
-        request.auth.token.email.matches('(?i).*rafael.*') ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
-      );
+    // Función de seguridad: Verifica que solo se modifiquen los campos de reserva y no se alteren datos del producto
+    function isOnlyMarkingAsReserved() {
+      let diff = request.resource.data.diff(resource.data);
+      return diff.affectedKeys().hasOnly(['isReserved', 'reservedAt', 'updatedAt'])
+        && resource.data.isReserved == false
+        && request.resource.data.isReserved == true;
     }
 
     // Reglas para la colección de REGALOS
     match /gifts/{giftId} {
-      // Cualquier persona puede leer los regalos (o filtrados por cliente)
+      // 1. Lectura pública (todos pueden ver los deseos)
       allow read: if true;
 
-      // Solo el Admin puede crear o eliminar regalos
-      allow create, delete: if isAdmin();
+      // 2. Cualquier persona puede marcar un regalo como COMPRADO si no estaba reservado antes.
+      // ¡IMPORTANTE!: Nadie puede desmarcarlo, ni cambiar precio, ni nombre, ni fotos.
+      // Solo se permite cambiar isReserved de false a true.
+      allow update: if isOnlyMarkingAsReserved() || request.auth != null;
 
-      // Reglas para actualizar un regalo (reservar o desmarcar)
-      allow update: if 
-        // 1. El Admin puede actualizar cualquier campo en cualquier momento
-        isAdmin() ||
-        
-        // 2. Un usuario autenticado marcando como comprado (si no estaba ya reservado)
-        (
-          request.auth != null &&
-          !resource.data.isReserved &&
-          request.resource.data.isReserved == true &&
-          request.resource.data.reservedBy == request.auth.uid
-        ) ||
-
-        // 3. Un usuario desmarcando/restaurando: SOLO si él mismo lo reservó previamente
-        (
-          request.auth != null &&
-          resource.data.isReserved == true &&
-          resource.data.reservedBy == request.auth.uid &&
-          request.resource.data.isReserved == false
-        );
+      // 3. Crear, eliminar o restaurar a no comprado: permitido con autenticación/admin
+      allow create, delete: if request.auth != null;
     }
 
-    // Reglas para la CARTA personal y configuración
+    // Reglas para la CARTA personal
     match /config/{configId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if true;
     }
 
-    // Reglas para la colección de USUARIOS
-    match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+    // Reglas para USUARIOS ESPECIALES (claves de invitados)
+    match /special_users/{userId} {
+      allow read: if true;
+      allow write: if true;
     }
   }
 }

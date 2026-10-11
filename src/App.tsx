@@ -15,11 +15,11 @@ import { giftService } from './services/giftService';
 import { useAuth } from './context/AuthContext';
 import { Sparkles, Heart } from 'lucide-react';
 
-const SEEN_LETTER_KEY = 'lista_regalos_letter_seen_v2';
-const VIEW_MODE_KEY = 'lista_regalos_view_mode_v2';
+const SEEN_LETTER_KEY = 'lista_regalos_letter_seen_v3';
+const VIEW_MODE_KEY = 'lista_regalos_view_mode_v3';
 
 export const AppContent: React.FC = () => {
-  const { currentUser, isAdmin } = useAuth();
+  const { session, isAdmin } = useAuth();
 
   // App data state
   const [gifts, setGifts] = useState<Gift[]>([]);
@@ -46,13 +46,11 @@ export const AppContent: React.FC = () => {
     mode: 'reserve' | 'unreserve';
   } | null>(null);
 
-  // Save viewMode preference
   const handleSetViewMode = (mode: 'deck' | 'grid') => {
     setViewMode(mode);
     localStorage.setItem(VIEW_MODE_KEY, mode);
   };
 
-  // Subscribe to real-time gifts and letter
   useEffect(() => {
     const unsubGifts = giftService.subscribeGifts((updatedGifts) => {
       setGifts(updatedGifts);
@@ -62,7 +60,6 @@ export const AppContent: React.FC = () => {
       setLetter(updatedLetter);
     });
 
-    // Check if letter has been seen this session
     const seen = sessionStorage.getItem(SEEN_LETTER_KEY);
     if (!seen) {
       setLetterOpen(true);
@@ -76,31 +73,23 @@ export const AppContent: React.FC = () => {
   }, []);
 
   // Filter gifts by:
-  // 1. Audience / User Permissions
+  // 1. Audience / Visibility (Public vs Special Unlocked User vs Admin)
   // 2. Category
-  // 3. Status
+  // 3. Status (Available / Reserved)
   // 4. Search query
   const filteredGifts = useMemo(() => {
     return gifts.filter((gift) => {
-      // 1. AUDIENCE PERMISSIONS:
-      // If admin, can see everything!
+      // 1. VISIBILITY PERMISSION:
+      // Admin sees ALL gifts
       if (!isAdmin) {
-        const allowedTargets = gift.visibleTo || ['all'];
-        const isPublic = allowedTargets.includes('all');
+        const isPublic = gift.visibleTo.includes('all');
+        const matchesUnlockedUser = Boolean(
+          session?.name && 
+          gift.visibleTo.some(u => u.toLowerCase() === session.name.toLowerCase())
+        );
 
-        if (currentUser) {
-          const isUserMatch = 
-            allowedTargets.includes(currentUser.username) || 
-            allowedTargets.includes(currentUser.uid);
-          const isGroupMatch = 
-            currentUser.group && allowedTargets.includes(currentUser.group);
-
-          if (!isPublic && !isUserMatch && !isGroupMatch) {
-            return false;
-          }
-        } else {
-          // Unauthenticated guest only sees 'all'
-          if (!isPublic) return false;
+        if (!isPublic && !matchesUnlockedUser) {
+          return false;
         }
       }
 
@@ -118,11 +107,6 @@ export const AppContent: React.FC = () => {
       if (statusFilter === 'reserved' && !gift.isReserved) {
         return false;
       }
-      if (statusFilter === 'mine') {
-        if (!currentUser) return false;
-        const isMine = gift.reservedBy === currentUser.uid || gift.reservedBy === currentUser.username;
-        if (!isMine) return false;
-      }
 
       // 4. SEARCH QUERY:
       if (searchQuery.trim()) {
@@ -137,9 +121,8 @@ export const AppContent: React.FC = () => {
 
       return true;
     });
-  }, [gifts, isAdmin, currentUser, selectedCategory, statusFilter, searchQuery]);
+  }, [gifts, isAdmin, session, selectedCategory, statusFilter, searchQuery]);
 
-  // Reservation actions
   const handleOpenReserve = (gift: Gift) => {
     setReserveModalState({ gift, mode: 'reserve' });
   };
@@ -148,19 +131,11 @@ export const AppContent: React.FC = () => {
     setReserveModalState({ gift, mode: 'unreserve' });
   };
 
-  const handleConfirmReservation = async (gift: Gift, customBuyerName?: string) => {
-    const userToRecord = currentUser || {
-      uid: 'invitado-' + (customBuyerName || 'anonimo').toLowerCase().replace(/\s+/g, '-'),
-      username: (customBuyerName || 'Invitado').toLowerCase(),
-      displayName: customBuyerName || 'Invitado Especial',
-      role: 'user' as const,
-      group: 'general' as const
-    };
-
+  const handleConfirmReservation = async (gift: Gift) => {
     if (reserveModalState?.mode === 'reserve') {
-      await giftService.toggleReserveGift(gift, userToRecord, true);
+      await giftService.toggleReserveGift(gift, true, isAdmin);
     } else {
-      await giftService.toggleReserveGift(gift, userToRecord, false);
+      await giftService.toggleReserveGift(gift, false, isAdmin);
     }
   };
 
@@ -202,9 +177,11 @@ export const AppContent: React.FC = () => {
           </h1>
 
           <p className="text-sm sm:text-base text-slate-300 font-light max-w-lg mx-auto">
-            {currentUser 
-              ? `¡Hola, ${currentUser.displayName}! Aquí tienes la lista preparada con todo el cariño.` 
-              : 'Elige un regalo para marcarlo como reservado y evitar compras repetidas.'}
+            {session 
+              ? (session.isAdmin 
+                  ? '👑 Modo Administrador activo: Puedes ver todos los deseos, añadir nuevos y reactivar regalos.' 
+                  : `✨ ¡Hola, ${session.name}! Tienes desbloqueados tus deseos exclusivos además de los generales.`)
+              : 'Elige un regalo para marcarlo como comprado y evitar que otra persona compre lo mismo.'}
           </p>
         </div>
 
@@ -253,7 +230,7 @@ export const AppContent: React.FC = () => {
         isOpen={letterOpen}
         onClose={() => setLetterOpen(false)}
         letter={letter}
-        userDisplayName={currentUser?.displayName}
+        userDisplayName={session?.name}
       />
 
       {/* Reservation Confirmation Modal */}
@@ -265,7 +242,7 @@ export const AppContent: React.FC = () => {
         onConfirm={handleConfirmReservation}
       />
 
-      {/* Authentication Modal */}
+      {/* Key Access / Login Modal */}
       <LoginModal
         isOpen={loginOpen}
         onClose={() => setLoginOpen(false)}
@@ -278,6 +255,9 @@ export const AppContent: React.FC = () => {
         gifts={gifts}
         letter={letter}
         onSaveLetter={handleSaveLetter}
+        onUnreserveGift={async (gift) => {
+          await giftService.toggleReserveGift(gift, false, true);
+        }}
       />
     </div>
   );

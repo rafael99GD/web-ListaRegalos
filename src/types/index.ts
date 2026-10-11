@@ -1,7 +1,5 @@
 export type GiftCategory = 'navidad' | 'cumpleanos' | 'ambos';
 export type GiftPriority = 'deseado' | 'muy-deseado' | 'ilusion-maxima';
-export type UserRole = 'admin' | 'user';
-export type UserGroup = 'familia' | 'amigos' | 'general';
 
 export interface Gift {
   id: string;
@@ -12,21 +10,22 @@ export interface Gift {
   descripcion: string;
   category: GiftCategory;
   priority: GiftPriority;
-  visibleTo: string[]; // e.g. ['all'] or ['familia', 'mama', 'carlos']
+  visibleTo: string[]; // ['all'] or specific usernames like ['Susana']
   isReserved: boolean;
-  reservedBy: string | null; // UID or username
-  reservedByName: string | null; // e.g. "Mamá", "Tía Carmen"
   reservedAt: string | null;
   createdAt: string;
 }
 
-export interface AppUser {
-  uid: string;
-  username: string;
-  displayName: string;
-  role: UserRole;
-  group: UserGroup;
-  createdAt?: string;
+export interface SpecialUser {
+  id: string;
+  name: string;
+  password: string;
+  createdAt: string;
+}
+
+export interface AppUserSession {
+  name: string;
+  isAdmin: boolean;
 }
 
 export interface LetterConfig {

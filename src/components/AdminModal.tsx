@@ -14,9 +14,11 @@ import {
   Flame, 
   Check, 
   Sparkles,
-  AlertTriangle
+  AlertTriangle,
+  KeyRound,
+  Undo2
 } from 'lucide-react';
-import type { Gift, LetterConfig, AppUser, GiftCategory, GiftPriority } from '../types';
+import type { Gift, LetterConfig, GiftCategory, GiftPriority } from '../types';
 import { isFirebaseConfigured, firebaseConfig } from '../config/firebase';
 import { giftService } from '../services/giftService';
 import { useAuth } from '../context/AuthContext';
@@ -28,6 +30,7 @@ interface AdminModalProps {
   gifts: Gift[];
   letter: LetterConfig;
   onSaveLetter: (letter: LetterConfig) => Promise<void>;
+  onUnreserveGift: (gift: Gift) => Promise<void>;
 }
 
 export const AdminModal: React.FC<AdminModalProps> = ({
@@ -36,8 +39,9 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   gifts,
   letter,
   onSaveLetter,
+  onUnreserveGift,
 }) => {
-  const { registeredUsers, addRegisteredUser } = useAuth();
+  const { specialUsers, addSpecialUser, deleteSpecialUser, adminPassword, setAdminPassword } = useAuth();
   const [activeTab, setActiveTab] = useState<'gifts' | 'letter' | 'users' | 'firebase'>('gifts');
 
   // Gift Form State
@@ -58,16 +62,18 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [letterSaving, setLetterSaving] = useState(false);
   const [letterSavedMsg, setLetterSavedMsg] = useState(false);
 
-  // New User Form State
+  // New Special User Form State
   const [newUserForm, setNewUserForm] = useState({
-    username: '',
-    displayName: '',
-    group: 'familia' as 'familia' | 'amigos' | 'general',
+    name: '',
+    password: '',
   });
+
+  // Change Admin Pass State
+  const [newAdminPass, setNewAdminPass] = useState(adminPassword);
+  const [adminPassSavedMsg, setAdminPassSavedMsg] = useState(false);
 
   if (!isOpen) return null;
 
-  // Reset gift form
   const resetGiftForm = () => {
     setEditingGiftId(null);
     setGiftForm({
@@ -95,7 +101,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       priority: gift.priority,
       visibleTo: gift.visibleTo || ['all']
     });
-    // Scroll to top of tab
   };
 
   const handleSaveGift = async (e: React.FormEvent) => {
@@ -128,39 +133,46 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     setTimeout(() => setLetterSavedMsg(false), 3000);
   };
 
-  const handleAddUser = (e: React.FormEvent) => {
+  const handleAddSpecialUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUserForm.username.trim() || !newUserForm.displayName.trim()) return;
+    if (!newUserForm.name.trim() || !newUserForm.password.trim()) return;
 
     sounds.playChime();
-    const newUser: AppUser = {
-      uid: 'user-' + newUserForm.username.trim().toLowerCase(),
-      username: newUserForm.username.trim().toLowerCase(),
-      displayName: newUserForm.displayName.trim(),
-      role: 'user',
-      group: newUserForm.group,
-      createdAt: new Date().toISOString()
-    };
-    addRegisteredUser(newUser);
+    await addSpecialUser(newUserForm.name, newUserForm.password);
     setNewUserForm({
-      username: '',
-      displayName: '',
-      group: 'familia'
+      name: '',
+      password: '',
     });
   };
 
-  const toggleVisibilityAudience = (audienceKey: string) => {
+  const handleDeleteSpecialUser = async (id: string) => {
+    if (window.confirm('¿Eliminar este usuario con clave especial?')) {
+      sounds.playClick();
+      await deleteSpecialUser(id);
+    }
+  };
+
+  const handleChangeAdminPass = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAdminPass.trim()) return;
+    setAdminPassword(newAdminPass);
+    sounds.playChime();
+    setAdminPassSavedMsg(true);
+    setTimeout(() => setAdminPassSavedMsg(false), 3000);
+  };
+
+  const toggleVisibilityUser = (userName: string) => {
     setGiftForm(prev => {
       let current = [...prev.visibleTo];
-      if (audienceKey === 'all') {
+      if (userName === 'all') {
         return { ...prev, visibleTo: ['all'] };
       }
       current = current.filter(item => item !== 'all');
-      if (current.includes(audienceKey)) {
-        current = current.filter(item => item !== audienceKey);
+      if (current.includes(userName)) {
+        current = current.filter(item => item !== userName);
         if (current.length === 0) current = ['all'];
       } else {
-        current.push(audienceKey);
+        current.push(userName);
       }
       return { ...prev, visibleTo: current };
     });
@@ -186,7 +198,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   <span>Panel de Control de Rafael</span>
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Gestiona regalos, audiencias familiares y carta personal
+                  Gestiona regalos, audiencias privadas y carta personal
                 </p>
               </div>
             </div>
@@ -234,7 +246,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               }`}
             >
               <Users className="w-4 h-4" />
-              <span>Usuarios / Familias</span>
+              <span>Usuarios con Clave ({specialUsers.length})</span>
             </button>
 
             <button
@@ -358,65 +370,44 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       />
                     </div>
 
-                    {/* Audience Visibility Selectors */}
+                    {/* Visibility Options */}
                     <div className="sm:col-span-2 space-y-2 p-3 bg-black/30 rounded-xl border border-festive-pine/60">
                       <label className="text-xs font-semibold text-festive-goldLight flex items-center gap-1.5">
                         <Users className="w-3.5 h-3.5 text-festive-gold" />
-                        <span>¿A quién debe aparecerle este regalo?</span>
+                        <span>Visibilidad de este regalo:</span>
                       </label>
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
-                          onClick={() => toggleVisibilityAudience('all')}
-                          className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                          onClick={() => toggleVisibilityUser('all')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                             giftForm.visibleTo.includes('all')
-                              ? 'bg-festive-gold text-festive-dark border-festive-gold font-bold'
+                              ? 'bg-festive-gold text-festive-dark border-festive-gold font-bold shadow-sm'
                               : 'bg-festive-forest text-slate-300 border-festive-pine'
                           }`}
                         >
-                          🌐 Todos (Público)
+                          🌐 Todos (Acceso público general)
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => toggleVisibilityAudience('familia')}
-                          className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                            giftForm.visibleTo.includes('familia')
-                              ? 'bg-festive-cranberry text-white border-festive-ruby font-bold'
-                              : 'bg-festive-forest text-slate-300 border-festive-pine'
-                          }`}
-                        >
-                          👨‍👩‍👧 Solo Familia
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => toggleVisibilityAudience('amigos')}
-                          className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                            giftForm.visibleTo.includes('amigos')
-                              ? 'bg-blue-600 text-white border-blue-400 font-bold'
-                              : 'bg-festive-forest text-slate-300 border-festive-pine'
-                          }`}
-                        >
-                          🎉 Solo Amigos
-                        </button>
-                        {registeredUsers.filter(u => u.role !== 'admin').map(u => (
+
+                        {specialUsers.map(u => (
                           <button
-                            key={u.uid}
+                            key={u.id}
                             type="button"
-                            onClick={() => toggleVisibilityAudience(u.username)}
-                            className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                              giftForm.visibleTo.includes(u.username)
-                                ? 'bg-purple-600 text-white border-purple-400 font-bold'
+                            onClick={() => toggleVisibilityUser(u.name)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1 ${
+                              giftForm.visibleTo.includes(u.name)
+                                ? 'bg-purple-600 text-white border-purple-400 font-bold shadow-sm'
                                 : 'bg-festive-forest text-slate-300 border-festive-pine'
                             }`}
                           >
-                            👤 {u.displayName}
+                            <span>🔒 Solo {u.name}</span>
                           </button>
                         ))}
                       </div>
                       <p className="text-[11px] text-slate-400">
                         {giftForm.visibleTo.includes('all') 
-                          ? 'Este regalo lo verá cualquier persona que visite la web.' 
-                          : `Solo visible para: ${giftForm.visibleTo.join(', ')}.`}
+                          ? 'Cualquier persona que entre a la web verá este regalo.' 
+                          : `Solo las personas con clave que desbloqueen a: ${giftForm.visibleTo.join(', ')}.`}
                       </p>
                     </div>
 
@@ -445,7 +436,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="font-serif font-bold text-base text-slate-200">
-                      Regalos actuales en la lista ({gifts.length}):
+                      Regalos en la lista ({gifts.length}):
                     </h4>
                     <button
                       onClick={async () => {
@@ -482,17 +473,29 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                               <span>•</span>
                               <span>{g.category}</span>
                               <span>•</span>
-                              <span>👁️ {g.visibleTo?.join(', ') || 'all'}</span>
+                              <span>👁️ {g.visibleTo.includes('all') ? 'Todos' : g.visibleTo.join(', ')}</span>
                             </div>
                             {g.isReserved && (
-                              <p className="text-[11px] text-amber-300 font-medium mt-0.5">
-                                🎁 Reservado por: {g.reservedByName || 'alguien'}
+                              <p className="text-[11px] text-amber-300 font-bold mt-0.5 flex items-center gap-1">
+                                <span>🎁 Estado: Comprado</span>
                               </p>
                             )}
                           </div>
                         </div>
 
                         <div className="flex items-center gap-1.5 shrink-0">
+                          {/* UNRESERVE BUTTON FOR ADMIN */}
+                          {g.isReserved && (
+                            <button
+                              onClick={() => onUnreserveGift(g)}
+                              className="px-2.5 py-1.5 rounded-lg bg-festive-wine hover:bg-festive-ruby text-white text-xs flex items-center gap-1 font-medium shadow-sm transition-colors"
+                              title="Reactivar regalo como no comprado"
+                            >
+                              <Undo2 className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">Reactivar</span>
+                            </button>
+                          )}
+
                           <button
                             onClick={() => handleStartEdit(g)}
                             className="p-2 rounded-lg bg-festive-forest text-slate-300 hover:text-white hover:bg-festive-pine"
@@ -606,7 +609,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 {letterSavedMsg && (
                   <div className="p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-200 text-xs flex items-center gap-2">
                     <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>¡Carta actualizada correctamente en Firestore / local!</span>
+                    <span>¡Carta actualizada correctamente!</span>
                   </div>
                 )}
 
@@ -623,103 +626,120 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               </form>
             )}
 
-            {/* ================= TAB 3: USERS & FAMILIES ================= */}
+            {/* ================= TAB 3: SPECIAL USERS ================= */}
             {activeTab === 'users' && (
               <div className="space-y-6">
                 
-                {/* User creation */}
+                {/* Create Special User */}
                 <div className="bg-festive-forest/70 p-4 sm:p-6 rounded-2xl border border-festive-pine space-y-4">
                   <h3 className="font-serif font-bold text-base text-festive-goldLight flex items-center gap-2">
                     <Plus className="w-4 h-4 text-festive-gold" />
-                    Crear Nuevo Usuario / Familiar
+                    Crear Invitado Especial (Nombre y Contraseña)
                   </h3>
                   <p className="text-xs text-slate-300">
-                    Crea un usuario para que un familiar tenga acceso exclusivo a ciertos regalos o para identificarlo automáticamente al reservar.
+                    Crea una clave para una persona concreta (ej: <span className="text-white font-semibold">Susana</span> con clave <span className="text-white font-semibold">contraseña1.</span>). Así podrá acceder para ver regalos exclusivos que solo ella puede ver.
                   </p>
 
-                  <form onSubmit={handleAddUser} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <form onSubmit={handleAddSpecialUser} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-300">Nombre Visible:</label>
+                      <label className="text-xs font-semibold text-slate-300">Nombre de la persona:</label>
                       <input
                         type="text"
                         required
-                        value={newUserForm.displayName}
-                        onChange={(e) => setNewUserForm({ ...newUserForm, displayName: e.target.value })}
-                        placeholder="ej: Mamá, Tía Carmen, Carlos"
+                        value={newUserForm.name}
+                        onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
+                        placeholder="ej: Susana, Tía Carmen, Carlos"
                         className="w-full px-3 py-2 bg-black/40 border border-festive-pine rounded-xl text-sm text-slate-100 focus:outline-none focus:border-festive-gold"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-300">Usuario (Login):</label>
+                      <label className="text-xs font-semibold text-slate-300">Contraseña que le darás:</label>
                       <input
                         type="text"
                         required
-                        value={newUserForm.username}
-                        onChange={(e) => setNewUserForm({ ...newUserForm, username: e.target.value })}
-                        placeholder="ej: mama, carmen, carlos"
+                        value={newUserForm.password}
+                        onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
+                        placeholder="ej: contraseña1., navidad2026"
                         className="w-full px-3 py-2 bg-black/40 border border-festive-pine rounded-xl text-sm text-slate-100 focus:outline-none focus:border-festive-gold"
                       />
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-300">Grupo:</label>
-                      <select
-                        value={newUserForm.group}
-                        onChange={(e) => setNewUserForm({ ...newUserForm, group: e.target.value as 'familia' | 'amigos' | 'general' })}
-                        className="w-full px-3 py-2 bg-black/40 border border-festive-pine rounded-xl text-sm text-slate-100 focus:outline-none focus:border-festive-gold"
-                      >
-                        <option value="familia">Familia</option>
-                        <option value="amigos">Amigos</option>
-                        <option value="general">General</option>
-                      </select>
-                    </div>
-
-                    <div className="sm:col-span-3 flex justify-end pt-1">
+                    <div className="sm:col-span-2 flex justify-end pt-1">
                       <button
                         type="submit"
                         className="px-5 py-2 rounded-xl bg-festive-gold text-festive-dark font-bold text-xs hover:bg-festive-goldLight shadow-sm flex items-center gap-1.5"
                       >
                         <Plus className="w-3.5 h-3.5" />
-                        <span>Añadir Familiar</span>
+                        <span>Añadir Invitado Especial</span>
                       </button>
                     </div>
                   </form>
                 </div>
 
-                {/* User List */}
+                {/* List of Special Users */}
                 <div className="space-y-2">
                   <h4 className="font-serif font-bold text-base text-slate-200">
-                    Usuarios configurados ({registeredUsers.length}):
+                    Invitados especiales actuales ({specialUsers.length}):
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {registeredUsers.map(u => (
+                    {specialUsers.map(u => (
                       <div
-                        key={u.uid}
+                        key={u.id}
                         className="p-3 rounded-xl bg-festive-forest/60 border border-festive-pine flex items-center justify-between"
                       >
                         <div>
-                          <p className="font-semibold text-sm text-slate-100 flex items-center gap-1.5">
-                            <span>{u.displayName}</span>
-                            {u.role === 'admin' && (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-festive-wine text-festive-goldLight font-bold">
-                                Admin
-                              </span>
-                            )}
+                          <p className="font-semibold text-sm text-slate-100">
+                            👤 {u.name}
                           </p>
                           <p className="text-xs text-slate-400 mt-0.5">
-                            Login: <code className="text-festive-goldLight">{u.username}</code> • Grupo: {u.group}
+                            Clave: <code className="text-festive-goldLight bg-black/30 px-1 py-0.5 rounded">{u.password}</code>
                           </p>
                         </div>
+                        <button
+                          onClick={() => handleDeleteSpecialUser(u.id)}
+                          className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                          title="Eliminar usuario"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     ))}
                   </div>
                 </div>
 
+                {/* Change Admin Password */}
+                <div className="bg-festive-forest/50 p-4 rounded-2xl border border-festive-pine/60 space-y-3">
+                  <h4 className="font-serif font-bold text-sm text-festive-goldLight flex items-center gap-1.5">
+                    <KeyRound className="w-4 h-4 text-festive-gold" />
+                    <span>Tu Contraseña de Administrador (Rafael)</span>
+                  </h4>
+                  <form onSubmit={handleChangeAdminPass} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newAdminPass}
+                      onChange={(e) => setNewAdminPass(e.target.value)}
+                      placeholder="Nueva clave admin..."
+                      className="flex-1 px-3 py-2 bg-black/40 border border-festive-pine rounded-xl text-sm text-slate-100 focus:outline-none focus:border-festive-gold"
+                    />
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-xl bg-festive-forest hover:bg-festive-pine text-slate-200 border border-festive-pine text-xs font-semibold"
+                    >
+                      Guardar Clave Admin
+                    </button>
+                  </form>
+                  {adminPassSavedMsg && (
+                    <p className="text-xs text-emerald-400 font-medium">
+                      ✓ Contraseña de administrador actualizada.
+                    </p>
+                  )}
+                </div>
+
               </div>
             )}
 
-            {/* ================= TAB 4: FIREBASE STATUS ================= */}
+            {/* ================= TAB 4: FIREBASE ================= */}
             {activeTab === 'firebase' && (
               <div className="space-y-5 bg-festive-forest/70 p-4 sm:p-6 rounded-2xl border border-festive-pine">
                 <div className="flex items-center gap-3">
@@ -737,7 +757,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     <p className="text-xs text-slate-300">
                       {isFirebaseConfigured
                         ? `Conectado al proyecto: ${firebaseConfig.projectId}`
-                        : 'Modo local activo (Firebase pendiente de configurar)'}
+                        : 'Modo local activo (Firebase pendiente de enlazar)'}
                     </p>
                   </div>
                 </div>
@@ -746,30 +766,23 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-200 text-xs space-y-2">
                     <p className="font-semibold flex items-center gap-1.5 text-emerald-300">
                       <Check className="w-4 h-4" />
-                      ¡Firebase está activo y funcionando en la nube!
+                      ¡Firebase está activo y sincronizando en tiempo real!
                     </p>
                     <p>
-                      Cualquier regalo que añadas, edites o reserves se sincroniza en tiempo real con Firestore y estará disponible para cualquier familiar desde cualquier dispositivo.
+                      Todos los regalos comprados se actualizan al instante en los móviles de los familiares sin que nadie sepa quién compró qué.
                     </p>
                   </div>
                 ) : (
                   <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-500/40 text-amber-200 text-xs space-y-2">
                     <p className="font-semibold flex items-center gap-1.5 text-amber-300">
                       <AlertTriangle className="w-4 h-4" />
-                      Actualmente en modo Almacenamiento Local
+                      Modo local activo
                     </p>
                     <p>
-                      La web funciona perfectamente en tu navegador guardando datos localmente. Para que todos tus familiares compartan la misma lista en tiempo real gratis desde sus móviles, consulta el archivo <code className="bg-black/40 px-1 py-0.5 rounded text-white">GUIA_FIREBASE.md</code> incluido en el repositorio.
+                      Para que todos compartan la misma lista en vivo desde sus móviles, solo tienes que copiar las claves de tu app web en <code className="bg-black/40 px-1 py-0.5 rounded text-white">src/config/firebase.ts</code>.
                     </p>
                   </div>
                 )}
-
-                <div className="p-3 bg-black/40 rounded-xl border border-festive-pine text-xs text-slate-300 space-y-1.5">
-                  <p className="font-bold text-festive-goldLight">Valores detectados actualmente:</p>
-                  <p>• API Key: <code className="text-slate-400">{firebaseConfig.apiKey ? '✓ Configurada' : '✕ No definida'}</code></p>
-                  <p>• Project ID: <code className="text-slate-400">{firebaseConfig.projectId || '✕ No definido'}</code></p>
-                  <p>• Auth Domain: <code className="text-slate-400">{firebaseConfig.authDomain || '✕ No definido'}</code></p>
-                </div>
               </div>
             )}
 
@@ -777,7 +790,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
           {/* Footer note */}
           <div className="pt-3 border-t border-festive-pine/60 flex items-center justify-between text-xs text-slate-400">
-            <span>Sesión Admin activa</span>
+            <span>Sesión Administrador (Rafael)</span>
             <button
               onClick={() => { sounds.playClick(); onClose(); }}
               className="px-4 py-1.5 rounded-lg bg-festive-forest text-slate-300 hover:text-white"

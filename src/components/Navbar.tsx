@@ -8,9 +8,7 @@ import {
   FileText, 
   SlidersHorizontal, 
   LogOut, 
-  LogIn, 
-  Eye, 
-  EyeOff, 
+  KeyRound, 
   LayoutGrid, 
   Layers 
 } from 'lucide-react';
@@ -40,7 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAdmin,
   onOpenLogin,
 }) => {
-  const { currentUser, isAdmin, surpriseMode, toggleSurpriseMode, logout } = useAuth();
+  const { session, isAdmin, logout } = useAuth();
 
   const handleSoundToggle = () => {
     setSoundActive(prev => {
@@ -142,56 +140,37 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
             title={snowActive ? 'Nieve: Activa' : 'Nieve: En pausa'}
           >
-            <Snowflake className={`w-4 h-4 ${snowActive ? 'animate-spin-slow' : ''}`} />
+            <Snowflake className="w-4 h-4" />
           </button>
 
-          {/* Admin Controls */}
+          {/* Admin Panel Button */}
           {isAdmin && (
-            <>
-              {/* Surprise Mode Toggle (Hide or show who bought what) */}
-              <button
-                onClick={() => { sounds.playClick(); toggleSurpriseMode(); }}
-                className={`p-2 sm:px-2.5 sm:py-2 rounded-xl border flex items-center gap-1.5 text-xs transition-all ${
-                  surpriseMode 
-                    ? 'bg-purple-950/70 text-purple-200 border-purple-500/40' 
-                    : 'bg-amber-950/70 text-amber-200 border-amber-500/40'
-                }`}
-                title={surpriseMode ? "Modo Sorpresa ACTIVO (Ocultando nombres de compradores)" : "Modo Supervisor (Viendo quién compró cada cosa)"}
-              >
-                {surpriseMode ? <EyeOff className="w-4 h-4 text-purple-400" /> : <Eye className="w-4 h-4 text-amber-400" />}
-                <span className="hidden xl:inline">
-                  {surpriseMode ? 'Sorpresa ON' : 'Ver Compradores'}
-                </span>
-              </button>
-
-              {/* Admin Panel Button */}
-              <button
-                onClick={() => { sounds.playClick(); onOpenAdmin(); }}
-                className="px-2.5 sm:px-3 py-2 rounded-xl bg-festive-cranberry text-white border border-festive-gold/50 flex items-center gap-1.5 text-xs font-semibold shadow-glow-ruby hover:bg-festive-ruby transition-all"
-                title="Abrir Panel de Administración"
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5 text-festive-goldLight" />
-                <span className="hidden sm:inline">Admin</span>
-              </button>
-            </>
+            <button
+              onClick={() => { sounds.playClick(); onOpenAdmin(); }}
+              className="px-2.5 sm:px-3 py-2 rounded-xl bg-festive-cranberry text-white border border-festive-gold/50 flex items-center gap-1.5 text-xs font-semibold shadow-glow-ruby hover:bg-festive-ruby transition-all"
+              title="Abrir Panel de Administración"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-festive-goldLight" />
+              <span className="hidden sm:inline">Admin</span>
+            </button>
           )}
 
-          {/* User Status / Login Button */}
-          {currentUser ? (
+          {/* User Status / Access with Key */}
+          {session ? (
             <div className="flex items-center gap-1.5 pl-1">
               <div 
-                className="px-2.5 py-1.5 rounded-xl bg-festive-pine/60 border border-festive-gold/30 text-xs text-festive-goldLight font-medium flex items-center gap-1.5"
-                title={`Identificado como: ${currentUser.displayName} (${currentUser.username})`}
+                className="px-2.5 py-1.5 rounded-xl bg-festive-pine/80 border border-festive-gold/30 text-xs text-festive-goldLight font-medium flex items-center gap-1.5"
+                title={session.isAdmin ? 'Sesión de Administrador activa' : `Regalos exclusivos desbloqueados para ${session.name}`}
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping" />
+                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
                 <span className="max-w-[90px] sm:max-w-[120px] truncate">
-                  {currentUser.displayName}
+                  {session.name}
                 </span>
               </div>
               <button
                 onClick={() => { sounds.playClick(); logout(); }}
                 className="p-2 rounded-xl bg-festive-forest/60 hover:bg-festive-wine/80 text-slate-400 hover:text-white border border-festive-pine/50 transition-colors"
-                title="Cerrar sesión"
+                title="Cerrar sesión especial"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -200,9 +179,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => { sounds.playClick(); onOpenLogin(); }}
               className="px-3 py-2 rounded-xl bg-festive-forest hover:bg-festive-pine text-slate-200 hover:text-festive-goldLight border border-festive-pine/80 flex items-center gap-1.5 text-xs font-medium transition-all"
+              title="Entrar con clave para desbloquear regalos exclusivos o modo admin"
             >
-              <LogIn className="w-4 h-4 text-festive-gold" />
-              <span>Entrar</span>
+              <KeyRound className="w-3.5 h-3.5 text-festive-gold" />
+              <span className="hidden sm:inline">Acceso con Clave</span>
             </button>
           )}
 

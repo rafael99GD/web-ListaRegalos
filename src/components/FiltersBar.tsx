@@ -1,10 +1,9 @@
 import React from 'react';
-import { Search, Sparkles, Gift, UserCheck } from 'lucide-react';
+import { Search, Sparkles, Gift } from 'lucide-react';
 import type { GiftCategory } from '../types';
-import { useAuth } from '../context/AuthContext';
 import { sounds } from '../utils/audio';
 
-export type StatusFilter = 'all' | 'available' | 'reserved' | 'mine';
+export type StatusFilter = 'all' | 'available' | 'reserved';
 
 interface FiltersBarProps {
   selectedCategory: GiftCategory | 'all';
@@ -27,7 +26,6 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
   totalCount,
   filteredCount,
 }) => {
-  const { currentUser } = useAuth();
 
   return (
     <div className="w-full max-w-5xl mx-auto mb-6 px-4 space-y-3.5">
@@ -132,20 +130,6 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
             <Gift className="w-3 h-3 text-festive-ruby" />
             <span>Ya reservados</span>
           </button>
-
-          {currentUser && (
-            <button
-              onClick={() => { sounds.playClick(); setStatusFilter('mine'); }}
-              className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
-                statusFilter === 'mine'
-                  ? 'bg-indigo-950/90 text-indigo-200 border border-indigo-500/40'
-                  : 'text-slate-400 hover:text-indigo-300'
-              }`}
-            >
-              <UserCheck className="w-3 h-3 text-indigo-400" />
-              <span>Mis reservas</span>
-            </button>
-          )}
         </div>
       </div>
     </div>

@@ -10,12 +10,12 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../config/firebase';
-import type { Gift, LetterConfig, AppUser } from '../types';
-import { INITIAL_GIFTS, INITIAL_LETTER, DEFAULT_USERS } from '../data/initialData';
+import type { Gift, LetterConfig, SpecialUser } from '../types';
+import { INITIAL_GIFTS, INITIAL_LETTER, INITIAL_SPECIAL_USERS } from '../data/initialData';
 
-const LOCAL_STORAGE_GIFTS_KEY = 'lista_regalos_items_v2';
-const LOCAL_STORAGE_LETTER_KEY = 'lista_regalos_letter_v2';
-const LOCAL_STORAGE_USERS_KEY = 'lista_regalos_users_v2';
+const LOCAL_STORAGE_GIFTS_KEY = 'lista_regalos_items_v3';
+const LOCAL_STORAGE_LETTER_KEY = 'lista_regalos_letter_v3';
+const LOCAL_STORAGE_SPECIAL_USERS_KEY = 'lista_regalos_special_users_v3';
 
 // Helper for local storage
 const getLocalGifts = (): Gift[] => {
@@ -36,7 +36,7 @@ const saveLocalGifts = (gifts: Gift[]) => {
 };
 
 export const giftService = {
-  // Subscribe to real-time gifts (Firestore or local listener)
+  // Subscribe to real-time gifts (Firestore or local storage listener)
   subscribeGifts(onGiftsUpdated: (gifts: Gift[]) => void): () => void {
     if (isFirebaseConfigured && db) {
       try {
@@ -45,7 +45,6 @@ export const giftService = {
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
           if (snapshot.empty) {
-            // First time setup: seed with initial gifts!
             console.log('🌱 [Firestore] Colección vacía. Sembrando regalos iniciales...');
             this.seedFirestore();
             onGiftsUpdated(INITIAL_GIFTS);
@@ -67,7 +66,6 @@ export const giftService = {
       }
     }
 
-    // Local storage fallback with interval / storage event
     onGiftsUpdated(getLocalGifts());
     const handler = () => onGiftsUpdated(getLocalGifts());
     window.addEventListener('storage', handler);
@@ -87,34 +85,33 @@ export const giftService = {
       }
       const letterDoc = doc(db, 'config', 'letter');
       await setDoc(letterDoc, INITIAL_LETTER);
+
+      for (const user of INITIAL_SPECIAL_USERS) {
+        const uDoc = doc(db, 'special_users', user.id);
+        await setDoc(uDoc, user);
+      }
     } catch (e) {
-      console.warn('Error sembrando regalos en Firestore:', e);
+      console.warn('Error sembrando datos en Firestore:', e);
     }
   },
 
-  // Toggle reservation with security checks
-  async toggleReserveGift(gift: Gift, user: AppUser, shouldReserve: boolean): Promise<boolean> {
-    // SECURITY VALIDATION:
-    // Only the user who reserved it OR an admin can un-reserve!
+  // Toggle reservation (Completely anonymous - NO buyer names stored anywhere!)
+  async toggleReserveGift(gift: Gift, shouldReserve: boolean, isAdmin: boolean): Promise<boolean> {
+    // SECURITY RULE:
+    // Only Rafael (Admin) can un-reserve a gift!
     if (!shouldReserve && gift.isReserved) {
-      const isOwner = gift.reservedBy === user.uid || gift.reservedBy === user.username;
-      const isAdmin = user.role === 'admin';
-      if (!isOwner && !isAdmin) {
-        throw new Error('🔒 Seguridad: Solo quien reservó este regalo o Rafael pueden desmarcarlo.');
+      if (!isAdmin) {
+        throw new Error('🔒 Seguridad: Una vez marcado como comprado, solo Rafael puede desmarcarlo. Por favor avísale para que lo restaure.');
       }
     }
 
     const updatedData: Partial<Gift> = shouldReserve
       ? {
           isReserved: true,
-          reservedBy: user.uid,
-          reservedByName: user.displayName || user.username,
           reservedAt: new Date().toISOString()
         }
       : {
           isReserved: false,
-          reservedBy: null,
-          reservedByName: null,
           reservedAt: null
         };
 
@@ -142,14 +139,12 @@ export const giftService = {
   },
 
   // Add new gift (Admin)
-  async addGift(giftData: Omit<Gift, 'id' | 'createdAt' | 'isReserved' | 'reservedBy' | 'reservedByName' | 'reservedAt'>): Promise<Gift> {
+  async addGift(giftData: Omit<Gift, 'id' | 'createdAt' | 'isReserved' | 'reservedAt'>): Promise<Gift> {
     const newId = 'regalo-' + Date.now();
     const newGift: Gift = {
       ...giftData,
       id: newId,
       isReserved: false,
-      reservedBy: null,
-      reservedByName: null,
       reservedAt: null,
       createdAt: new Date().toISOString()
     };
@@ -197,7 +192,7 @@ export const giftService = {
     window.dispatchEvent(new Event('storage'));
   },
 
-  // Restore initial gifts (Admin convenience)
+  // Restore defaults
   async resetToDefaults(): Promise<void> {
     if (isFirebaseConfigured && db) {
       await this.seedFirestore();
@@ -254,21 +249,82 @@ export const giftService = {
     localStorage.setItem(LOCAL_STORAGE_LETTER_KEY, JSON.stringify(updated));
   },
 
-  // Users management in Firestore or local
-  getUsers(): AppUser[] {
-    try {
-      const raw = localStorage.getItem(LOCAL_STORAGE_USERS_KEY);
-      if (!raw) {
-        localStorage.setItem(LOCAL_STORAGE_USERS_KEY, JSON.stringify(DEFAULT_USERS));
-        return DEFAULT_USERS;
+  // Special Users Management (Name & Password without email)
+  subscribeSpecialUsers(onUsersUpdated: (users: SpecialUser[]) => void): () => void {
+    if (isFirebaseConfigured && db) {
+      try {
+        const usersCol = collection(db, 'special_users');
+        const unsub = onSnapshot(usersCol, (snap) => {
+          if (snap.empty) {
+            onUsersUpdated(INITIAL_SPECIAL_USERS);
+          } else {
+            const list: SpecialUser[] = [];
+            snap.forEach(d => list.push({ id: d.id, ...(d.data() as Omit<SpecialUser, 'id'>) }));
+            onUsersUpdated(list);
+          }
+        });
+        return unsub;
+      } catch (err) {
+        console.warn('Error en special_users:', err);
       }
-      return JSON.parse(raw);
-    } catch {
-      return DEFAULT_USERS;
     }
+
+    const getLocal = (): SpecialUser[] => {
+      try {
+        const raw = localStorage.getItem(LOCAL_STORAGE_SPECIAL_USERS_KEY);
+        if (!raw) {
+          localStorage.setItem(LOCAL_STORAGE_SPECIAL_USERS_KEY, JSON.stringify(INITIAL_SPECIAL_USERS));
+          return INITIAL_SPECIAL_USERS;
+        }
+        return JSON.parse(raw);
+      } catch {
+        return INITIAL_SPECIAL_USERS;
+      }
+    };
+
+    onUsersUpdated(getLocal());
+    const handler = () => onUsersUpdated(getLocal());
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
   },
 
-  saveUsers(users: AppUser[]) {
-    localStorage.setItem(LOCAL_STORAGE_USERS_KEY, JSON.stringify(users));
+  async addSpecialUser(name: string, password: string): Promise<SpecialUser> {
+    const newId = 'user-' + name.trim().toLowerCase().replace(/\s+/g, '-');
+    const newUser: SpecialUser = {
+      id: newId,
+      name: name.trim(),
+      password: password.trim(),
+      createdAt: new Date().toISOString()
+    };
+
+    if (isFirebaseConfigured && db) {
+      const docRef = doc(db, 'special_users', newId);
+      await setDoc(docRef, newUser);
+      return newUser;
+    }
+
+    const raw = localStorage.getItem(LOCAL_STORAGE_SPECIAL_USERS_KEY);
+    const list: SpecialUser[] = raw ? JSON.parse(raw) : INITIAL_SPECIAL_USERS;
+    const filtered = list.filter(u => u.name.toLowerCase() !== name.trim().toLowerCase());
+    filtered.push(newUser);
+    localStorage.setItem(LOCAL_STORAGE_SPECIAL_USERS_KEY, JSON.stringify(filtered));
+    window.dispatchEvent(new Event('storage'));
+    return newUser;
+  },
+
+  async deleteSpecialUser(id: string): Promise<void> {
+    if (isFirebaseConfigured && db) {
+      const docRef = doc(db, 'special_users', id);
+      await deleteDoc(docRef);
+      return;
+    }
+
+    const raw = localStorage.getItem(LOCAL_STORAGE_SPECIAL_USERS_KEY);
+    if (raw) {
+      const list: SpecialUser[] = JSON.parse(raw);
+      const filtered = list.filter(u => u.id !== id);
+      localStorage.setItem(LOCAL_STORAGE_SPECIAL_USERS_KEY, JSON.stringify(filtered));
+      window.dispatchEvent(new Event('storage'));
+    }
   }
 };

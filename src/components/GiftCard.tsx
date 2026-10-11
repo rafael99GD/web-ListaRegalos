@@ -24,33 +24,8 @@ export const GiftCard: React.FC<GiftCardProps> = ({
   onReserveClick,
   onUnreserveClick,
 }) => {
-  const { currentUser, isAdmin, surpriseMode } = useAuth();
+  const { isAdmin } = useAuth();
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
-
-  // Determine reservation ownership & display
-  const isReservedByMe = Boolean(
-    currentUser &&
-    gift.isReserved &&
-    (gift.reservedBy === currentUser.uid || gift.reservedBy === currentUser.username)
-  );
-
-  const canUnreserve = Boolean(
-    gift.isReserved && (isReservedByMe || isAdmin)
-  );
-
-  // Handle buyer label
-  let buyerLabel = '';
-  if (gift.isReserved) {
-    if (isReservedByMe) {
-      buyerLabel = '¡Reservado por ti!';
-    } else if (isAdmin && surpriseMode) {
-      buyerLabel = 'Reservado (🤫 Sorpresa)';
-    } else {
-      buyerLabel = gift.reservedByName 
-        ? `Reservado por ${gift.reservedByName}` 
-        : 'Reservado por alguien';
-    }
-  }
 
   const handleFlip = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -106,11 +81,11 @@ export const GiftCard: React.FC<GiftCardProps> = ({
                 )}
               </div>
 
-              {/* RESERVED STAMP OVERLAY */}
+              {/* RESERVED STAMP OVERLAY (100% Anonymous - No names ever) */}
               {gift.isReserved && (
                 <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px] flex items-center justify-center p-4">
-                  <div className="stamp-reserved px-4 py-1.5 text-xs sm:text-sm bg-festive-wine/80 text-festive-goldLight border-2 border-festive-gold rounded-lg shadow-xl tracking-wider">
-                    {isReservedByMe ? '🎁 RESERVADO POR TI' : '🎁 YA RESERVADO'}
+                  <div className="stamp-reserved px-4 py-2 text-xs sm:text-sm bg-festive-wine/90 text-festive-goldLight border-2 border-festive-gold rounded-lg shadow-xl tracking-wider">
+                    🎁 REGALO YA COMPRADO
                   </div>
                 </div>
               )}
@@ -144,12 +119,12 @@ export const GiftCard: React.FC<GiftCardProps> = ({
               {gift.isReserved ? (
                 <span className="text-festive-gold font-medium flex items-center gap-1">
                   <Check className="w-3.5 h-3.5 text-festive-gold" />
-                  <span className="truncate max-w-[170px]">{buyerLabel}</span>
+                  <span>Ya comprado</span>
                 </span>
               ) : (
                 <span className="text-emerald-400 font-medium flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-emerald-400" />
-                  Disponible para regalar
+                  Disponible para comprar
                 </span>
               )}
 
@@ -176,18 +151,20 @@ export const GiftCard: React.FC<GiftCardProps> = ({
                 <GiftIcon className="w-4 h-4 text-festive-gold" />
                 <span>¡Me lo pido para regalárselo!</span>
               </button>
-            ) : canUnreserve ? (
+            ) : isAdmin ? (
+              /* ONLY ADMIN CAN RESTORE */
               <button
                 onClick={() => { sounds.playClick(); onUnreserveClick(gift); }}
-                className="w-full py-2 px-3 rounded-xl bg-festive-wine/40 hover:bg-festive-wine text-slate-300 hover:text-white font-medium text-xs border border-festive-ruby/40 flex items-center justify-center gap-1.5 transition-colors"
+                className="w-full py-2 px-3 rounded-xl bg-festive-wine/50 hover:bg-festive-wine text-festive-goldLight font-medium text-xs border border-festive-ruby/50 flex items-center justify-center gap-1.5 transition-colors shadow-sm"
               >
                 <Undo2 className="w-3.5 h-3.5" />
-                <span>Restaurar / Marcar como no comprado</span>
+                <span>Reactivar regalo (Solo Admin)</span>
               </button>
             ) : (
-              <div className="w-full py-2 px-3 rounded-xl bg-festive-forest/50 text-slate-500 font-medium text-xs border border-festive-pine/40 flex items-center justify-center gap-1.5 cursor-not-allowed">
-                <Lock className="w-3.5 h-3.5" />
-                <span>Regalo ya asignado</span>
+              /* REGULAR USERS SEE LOCK & CONTACT RAFAEL NOTICE */
+              <div className="w-full py-2 px-2.5 rounded-xl bg-festive-forest/50 text-slate-400 text-[11px] border border-festive-pine/40 flex items-center justify-center gap-1.5 text-center">
+                <Lock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                <span>Comprado. Si te equivocaste, avisa a Rafael para reactivarlo.</span>
               </div>
             )}
           </div>
@@ -231,10 +208,8 @@ export const GiftCard: React.FC<GiftCardProps> = ({
 
             {isAdmin && (
               <div className="text-[11px] text-slate-400 bg-black/30 p-2 rounded-lg border border-white/5 space-y-1">
-                <p>👁️ <span className="text-slate-300">Visible para:</span> {gift.visibleTo.join(', ')}</p>
-                {gift.reservedByName && (
-                  <p>👤 <span className="text-slate-300">Comprador:</span> {gift.reservedByName}</p>
-                )}
+                <p>👁️ <span className="text-slate-300">Visible para:</span> {gift.visibleTo.includes('all') ? 'Todos' : gift.visibleTo.join(', ')}</p>
+                <p>🔒 <span className="text-slate-300">Estado:</span> {gift.isReserved ? 'Comprado' : 'Disponible'}</p>
               </div>
             )}
           </div>

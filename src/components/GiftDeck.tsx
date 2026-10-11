@@ -27,11 +27,10 @@ export const GiftDeck: React.FC<GiftDeckProps> = ({
   onReserveClick,
   onUnreserveClick,
 }) => {
-  const { currentUser, isAdmin, surpriseMode } = useAuth();
+  const { isAdmin } = useAuth();
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
 
-  // Reset index if gifts list changes or shrinks
   useEffect(() => {
     if (currentIndex >= gifts.length && gifts.length > 0) {
       setCurrentIndex(0);
@@ -41,13 +40,11 @@ export const GiftDeck: React.FC<GiftDeckProps> = ({
 
   const currentGift = gifts[currentIndex];
 
-  // Motion values for swipe physics
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-15, 15]);
   const opacityLike = useTransform(x, [50, 150], [0, 1]);
   const opacityPass = useTransform(x, [-150, -50], [1, 0]);
 
-  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') {
@@ -81,14 +78,12 @@ export const GiftDeck: React.FC<GiftDeckProps> = ({
   const handleDragEnd = (_: unknown, info: { offset: { x: number }; velocity: { x: number } }) => {
     const swipeThreshold = 100;
     if (info.offset.x > swipeThreshold || info.velocity.x > 500) {
-      // Swiped right: Want to reserve!
       if (currentGift && !currentGift.isReserved) {
         sounds.playChime();
         onReserveClick(currentGift);
       }
       handleNext();
     } else if (info.offset.x < -swipeThreshold || info.velocity.x < -500) {
-      // Swiped left: Next gift
       handleNext();
     }
   };
@@ -105,30 +100,6 @@ export const GiftDeck: React.FC<GiftDeckProps> = ({
         </p>
       </div>
     );
-  }
-
-  // Reservation permissions
-  const isReservedByMe = Boolean(
-    currentUser &&
-    currentGift.isReserved &&
-    (currentGift.reservedBy === currentUser.uid || currentGift.reservedBy === currentUser.username)
-  );
-
-  const canUnreserve = Boolean(
-    currentGift.isReserved && (isReservedByMe || isAdmin)
-  );
-
-  let buyerLabel = '';
-  if (currentGift.isReserved) {
-    if (isReservedByMe) {
-      buyerLabel = '¡Reservado por ti!';
-    } else if (isAdmin && surpriseMode) {
-      buyerLabel = 'Reservado (🤫 Sorpresa)';
-    } else {
-      buyerLabel = currentGift.reservedByName 
-        ? `Reservado por ${currentGift.reservedByName}` 
-        : 'Reservado por alguien';
-    }
   }
 
   const nextGift = gifts[(currentIndex + 1) % gifts.length];
@@ -157,7 +128,7 @@ export const GiftDeck: React.FC<GiftDeckProps> = ({
       {/* Stacked Cards Area */}
       <div className="relative w-full h-[470px] sm:h-[510px] perspective-1000">
         
-        {/* Background Ghost Card (Next card preview) */}
+        {/* Background Ghost Card */}
         {gifts.length > 1 && nextGift && (
           <div 
             className="absolute inset-0 w-full h-full rounded-3xl bg-festive-card border border-festive-pine/40 shadow-lg transform scale-95 translate-y-3 opacity-60 pointer-events-none overflow-hidden"
@@ -239,11 +210,11 @@ export const GiftDeck: React.FC<GiftDeckProps> = ({
                   )}
                 </div>
 
-                {/* Reserved Stamp */}
+                {/* Reserved Stamp (100% Anonymous) */}
                 {currentGift.isReserved && (
                   <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px] flex items-center justify-center p-4">
                     <div className="stamp-reserved px-5 py-2 text-sm sm:text-base bg-festive-wine/90 text-festive-goldLight border-2 border-festive-gold rounded-xl shadow-2xl tracking-wider">
-                      {isReservedByMe ? '🎁 RESERVADO POR TI' : '🎁 YA RESERVADO'}
+                      🎁 REGALO YA COMPRADO
                     </div>
                   </div>
                 )}
@@ -265,7 +236,7 @@ export const GiftDeck: React.FC<GiftDeckProps> = ({
               {currentGift.isReserved ? (
                 <span className="text-festive-gold font-medium flex items-center gap-1">
                   <Check className="w-3.5 h-3.5 text-festive-gold" />
-                  <span className="truncate max-w-[200px]">{buyerLabel}</span>
+                  <span>Ya comprado</span>
                 </span>
               ) : (
                 <span className="text-emerald-400 font-medium flex items-center gap-1">
@@ -328,10 +299,8 @@ export const GiftDeck: React.FC<GiftDeckProps> = ({
 
               {isAdmin && (
                 <div className="text-xs text-slate-400 bg-black/40 p-2.5 rounded-xl border border-white/5 space-y-1">
-                  <p>👁️ Visible para: <span className="text-slate-200">{currentGift.visibleTo.join(', ')}</span></p>
-                  {currentGift.reservedByName && (
-                    <p>👤 Comprador: <span className="text-festive-gold">{currentGift.reservedByName}</span></p>
-                  )}
+                  <p>👁️ Visible para: <span className="text-slate-200">{currentGift.visibleTo.includes('all') ? 'Todos' : currentGift.visibleTo.join(', ')}</span></p>
+                  <p>🔒 Estado: <span className="text-festive-gold">{currentGift.isReserved ? 'Comprado' : 'Disponible'}</span></p>
                 </div>
               )}
             </div>
@@ -405,21 +374,22 @@ export const GiftDeck: React.FC<GiftDeckProps> = ({
             <GiftIcon className="w-4 h-4 text-festive-goldLight" />
             <span>¡Me lo pido!</span>
           </button>
-        ) : canUnreserve ? (
+        ) : isAdmin ? (
+          /* ONLY ADMIN CAN RESTORE */
           <button
             onClick={() => {
               sounds.playClick();
               onUnreserveClick(currentGift);
             }}
-            className="flex-1 py-3 px-3 rounded-2xl bg-festive-wine/50 hover:bg-festive-wine text-slate-200 font-medium text-xs sm:text-sm border border-festive-ruby/50 flex items-center justify-center gap-1.5 transition-all"
+            className="flex-1 py-3 px-3 rounded-2xl bg-festive-wine/60 hover:bg-festive-wine text-festive-goldLight font-medium text-xs sm:text-sm border border-festive-ruby/50 flex items-center justify-center gap-1.5 transition-all shadow-sm"
           >
             <Undo2 className="w-4 h-4" />
-            <span>Restaurar</span>
+            <span>Reactivar (Admin)</span>
           </button>
         ) : (
-          <div className="flex-1 py-3 px-4 rounded-2xl bg-festive-forest/60 text-slate-400 font-medium text-xs sm:text-sm border border-festive-pine/50 flex items-center justify-center gap-2 cursor-not-allowed">
-            <Lock className="w-4 h-4 text-slate-500" />
-            <span>Ya Reservado</span>
+          <div className="flex-1 py-3 px-3 rounded-2xl bg-festive-forest/60 text-slate-400 font-medium text-[11px] sm:text-xs border border-festive-pine/50 flex items-center justify-center gap-1.5 text-center cursor-not-allowed">
+            <Lock className="w-4 h-4 text-slate-500 shrink-0" />
+            <span>Ya comprado</span>
           </div>
         )}
 

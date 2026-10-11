@@ -1,240 +1,129 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  signInWithEmailAndPassword, 
-  signOut as fbSignOut, 
-  onAuthStateChanged
-} from 'firebase/auth';
-import type { User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db, isFirebaseConfigured } from '../config/firebase';
-import type { AppUser } from '../types';
-import { DEFAULT_USERS } from '../data/initialData';
+import type { SpecialUser, AppUserSession } from '../types';
 import { giftService } from '../services/giftService';
 
+const ADMIN_PASSWORD_STORAGE_KEY = 'lista_regalos_admin_pass_v3';
+const SESSION_STORAGE_KEY = 'lista_regalos_session_v3';
+
 interface AuthContextType {
-  currentUser: AppUser | null;
-  loading: boolean;
+  session: AppUserSession | null;
   isAdmin: boolean;
-  surpriseMode: boolean;
-  toggleSurpriseMode: () => void;
-  login: (usernameOrEmail: string, password: string) => Promise<boolean>;
-  quickLoginAs: (user: AppUser) => void;
-  logout: () => Promise<void>;
-  registeredUsers: AppUser[];
-  addRegisteredUser: (user: AppUser) => void;
+  specialUsers: SpecialUser[];
+  adminPassword: string;
+  login: (name: string, pass: string) => Promise<{ success: boolean; message?: string }>;
+  logout: () => void;
+  setAdminPassword: (newPass: string) => void;
+  addSpecialUser: (name: string, pass: string) => Promise<SpecialUser>;
+  deleteSpecialUser: (id: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const CURRENT_USER_STORAGE_KEY = 'lista_regalos_current_user_v2';
-const SURPRISE_MODE_STORAGE_KEY = 'lista_regalos_surprise_mode_v2';
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [registeredUsers, setRegisteredUsers] = useState<AppUser[]>(DEFAULT_USERS);
-  const [surpriseMode, setSurpriseMode] = useState<boolean>(() => {
-    return localStorage.getItem(SURPRISE_MODE_STORAGE_KEY) === 'true';
+  const [session, setSession] = useState<AppUserSession | null>(() => {
+    try {
+      const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
   });
 
-  // Load saved local user or listen to Firebase
+  const [specialUsers, setSpecialUsers] = useState<SpecialUser[]>([]);
+  const [adminPassword, setAdminPasswordState] = useState<string>(() => {
+    return localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) || 'admin1234';
+  });
+
+  // Subscribe to special users from Firestore / local storage
   useEffect(() => {
-    // Load registered users list
-    const users = giftService.getUsers();
-    setRegisteredUsers(users);
-
-    if (isFirebaseConfigured && auth) {
-      const unsubscribe = onAuthStateChanged(auth, async (fbUser: FirebaseUser | null) => {
-        if (fbUser) {
-          // Fetch user metadata from Firestore if available
-          let role: 'admin' | 'user' = 'user';
-          let group: 'familia' | 'amigos' | 'general' = 'general';
-          let displayName = fbUser.displayName || fbUser.email?.split('@')[0] || 'Invitado';
-
-          if (db) {
-            try {
-              const uDoc = await getDoc(doc(db, 'users', fbUser.uid));
-              if (uDoc.exists()) {
-                const data = uDoc.data();
-                role = data.role || role;
-                group = data.group || group;
-                displayName = data.displayName || displayName;
-              }
-            } catch (e) {
-              console.warn('Error fetching user doc:', e);
-            }
-          }
-
-          // Special check: if email starts with rafael or is admin
-          if (fbUser.email?.toLowerCase().includes('rafael')) {
-            role = 'admin';
-          }
-
-          const userObj: AppUser = {
-            uid: fbUser.uid,
-            username: fbUser.email?.split('@')[0] || 'usuario',
-            displayName,
-            role,
-            group
-          };
-
-          setCurrentUser(userObj);
-          localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(userObj));
-        } else {
-          // Check local storage for persistent guest / local login
-          const saved = localStorage.getItem(CURRENT_USER_STORAGE_KEY);
-          if (saved) {
-            try {
-              setCurrentUser(JSON.parse(saved));
-            } catch {
-              setCurrentUser(null);
-            }
-          } else {
-            setCurrentUser(null);
-          }
-        }
-        setLoading(false);
-      });
-
-      return () => unsubscribe();
-    } else {
-      // Local demo mode: load from localStorage
-      const saved = localStorage.getItem(CURRENT_USER_STORAGE_KEY);
-      if (saved) {
-        try {
-          setCurrentUser(JSON.parse(saved));
-        } catch {
-          setCurrentUser(null);
-        }
-      } else {
-        // Default to a cozy guest or family view initially
-        setCurrentUser(null);
-      }
-      setLoading(false);
-    }
+    const unsub = giftService.subscribeSpecialUsers((users) => {
+      setSpecialUsers(users);
+    });
+    return () => unsub();
   }, []);
 
-  const toggleSurpriseMode = () => {
-    setSurpriseMode(prev => {
-      const next = !prev;
-      localStorage.setItem(SURPRISE_MODE_STORAGE_KEY, String(next));
-      return next;
-    });
+  const setAdminPassword = (newPass: string) => {
+    const trimmed = newPass.trim();
+    if (!trimmed) return;
+    setAdminPasswordState(trimmed);
+    localStorage.setItem(ADMIN_PASSWORD_STORAGE_KEY, trimmed);
   };
 
-  const login = async (usernameOrEmail: string, password: string): Promise<boolean> => {
-    const cleanInput = usernameOrEmail.trim().toLowerCase();
-    
-    // Check if input is standard email or username
-    const emailToUse = cleanInput.includes('@') 
-      ? cleanInput 
-      : `${cleanInput}@regalos.local`;
+  const login = async (name: string, pass: string): Promise<{ success: boolean; message?: string }> => {
+    const cleanName = name.trim();
+    const cleanPass = pass.trim();
 
-    if (isFirebaseConfigured && auth) {
-      try {
-        await signInWithEmailAndPassword(auth, emailToUse, password);
-        return true;
-      } catch (err: unknown) {
-        console.error('Firebase Auth error:', err);
-        // If Firebase fails, check if there is a local user match for demo/fallback
-        const found = registeredUsers.find(u => 
-          u.username.toLowerCase() === cleanInput || 
-          u.displayName.toLowerCase() === cleanInput
-        );
-        if (found) {
-          setCurrentUser(found);
-          localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(found));
-          return true;
-        }
-        throw err;
+    if (!cleanName || !cleanPass) {
+      return { success: false, message: 'Por favor introduce nombre y contraseña.' };
+    }
+
+    // 1. Check if Admin (Rafael)
+    if (cleanName.toLowerCase() === 'rafael') {
+      if (cleanPass === adminPassword) {
+        const adminSession: AppUserSession = {
+          name: 'Rafael',
+          isAdmin: true
+        };
+        setSession(adminSession);
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(adminSession));
+        return { success: true };
+      } else {
+        return { success: false, message: 'Contraseña de administrador incorrecta.' };
       }
     }
 
-    // Local / Demo mode login
-    const found = registeredUsers.find(u => 
-      u.username.toLowerCase() === cleanInput || 
-      u.displayName.toLowerCase() === cleanInput
+    // 2. Check if Special User (e.g. Susana)
+    const match = specialUsers.find(
+      u => u.name.toLowerCase() === cleanName.toLowerCase()
     );
 
-    if (found) {
-      setCurrentUser(found);
-      localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(found));
-      return true;
+    if (match) {
+      if (match.password === cleanPass) {
+        const specialSession: AppUserSession = {
+          name: match.name,
+          isAdmin: false
+        };
+        setSession(specialSession);
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(specialSession));
+        return { success: true };
+      } else {
+        return { success: false, message: `Contraseña incorrecta para ${match.name}.` };
+      }
     }
 
-    // If typing 'admin' or 'rafael' with any password in demo mode:
-    if (cleanInput === 'rafael' || cleanInput === 'admin') {
-      const adminUser: AppUser = {
-        uid: 'admin-rafael',
-        username: 'rafael',
-        displayName: 'Rafael (Admin)',
-        role: 'admin',
-        group: 'general'
-      };
-      setCurrentUser(adminUser);
-      localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(adminUser));
-      return true;
-    }
-
-    // Create a new guest session with this username
-    const guestUser: AppUser = {
-      uid: 'user-' + cleanInput,
-      username: cleanInput,
-      displayName: usernameOrEmail.trim(),
-      role: 'user',
-      group: 'general'
+    return { 
+      success: false, 
+      message: `No se encontró ningún usuario con el nombre "${cleanName}". Verifica el nombre o pídele acceso a Rafael.` 
     };
-    setCurrentUser(guestUser);
-    localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(guestUser));
-    return true;
   };
 
-  const quickLoginAs = (user: AppUser) => {
-    setCurrentUser(user);
-    localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(user));
+  const logout = () => {
+    setSession(null);
+    localStorage.removeItem(SESSION_STORAGE_KEY);
   };
 
-  const logout = async () => {
-    if (isFirebaseConfigured && auth) {
-      try {
-        await fbSignOut(auth);
-      } catch (e) {
-        console.warn('Error signing out of Firebase:', e);
-      }
-    }
-    setCurrentUser(null);
-    localStorage.removeItem(CURRENT_USER_STORAGE_KEY);
+  const addSpecialUser = async (name: string, pass: string) => {
+    return await giftService.addSpecialUser(name, pass);
   };
 
-  const addRegisteredUser = (newUser: AppUser) => {
-    const updated = [...registeredUsers, newUser];
-    setRegisteredUsers(updated);
-    giftService.saveUsers(updated);
-
-    if (isFirebaseConfigured && db) {
-      try {
-        setDoc(doc(db, 'users', newUser.uid), newUser);
-      } catch (e) {
-        console.warn('Error saving user to Firestore:', e);
-      }
-    }
+  const deleteSpecialUser = async (id: string) => {
+    return await giftService.deleteSpecialUser(id);
   };
 
-  const isAdmin = currentUser?.role === 'admin';
+  const isAdmin = Boolean(session?.isAdmin);
 
   return (
     <AuthContext.Provider
       value={{
-        currentUser,
-        loading,
+        session,
         isAdmin,
-        surpriseMode,
-        toggleSurpriseMode,
+        specialUsers,
+        adminPassword,
         login,
-        quickLoginAs,
         logout,
-        registeredUsers,
-        addRegisteredUser
+        setAdminPassword,
+        addSpecialUser,
+        deleteSpecialUser
       }}
     >
       {children}

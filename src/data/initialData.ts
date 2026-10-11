@@ -1,4 +1,4 @@
-import type { Gift, LetterConfig, AppUser } from '../types';
+import type { Gift, LetterConfig, SpecialUser } from '../types';
 
 export const INITIAL_LETTER: LetterConfig = {
   titulo: 'Queridos Reyes Magos, Familia y Amigos 🎄',
@@ -26,8 +26,6 @@ export const INITIAL_GIFTS: Gift[] = [
     priority: 'muy-deseado',
     visibleTo: ['all'],
     isReserved: false,
-    reservedBy: null,
-    reservedByName: null,
     reservedAt: null,
     createdAt: '2026-10-10T12:00:00.000Z'
   },
@@ -42,8 +40,6 @@ export const INITIAL_GIFTS: Gift[] = [
     priority: 'deseado',
     visibleTo: ['all'],
     isReserved: false,
-    reservedBy: null,
-    reservedByName: null,
     reservedAt: null,
     createdAt: '2026-10-10T12:01:00.000Z'
   },
@@ -58,8 +54,6 @@ export const INITIAL_GIFTS: Gift[] = [
     priority: 'muy-deseado',
     visibleTo: ['all'],
     isReserved: false,
-    reservedBy: null,
-    reservedByName: null,
     reservedAt: null,
     createdAt: '2026-10-10T12:02:00.000Z'
   },
@@ -74,8 +68,6 @@ export const INITIAL_GIFTS: Gift[] = [
     priority: 'ilusion-maxima',
     visibleTo: ['all'],
     isReserved: false,
-    reservedBy: null,
-    reservedByName: null,
     reservedAt: null,
     createdAt: '2026-10-10T12:03:00.000Z'
   },
@@ -90,8 +82,6 @@ export const INITIAL_GIFTS: Gift[] = [
     priority: 'deseado',
     visibleTo: ['all'],
     isReserved: false,
-    reservedBy: null,
-    reservedByName: null,
     reservedAt: null,
     createdAt: '2026-10-10T12:04:00.000Z'
   },
@@ -106,8 +96,6 @@ export const INITIAL_GIFTS: Gift[] = [
     priority: 'deseado',
     visibleTo: ['all'],
     isReserved: false,
-    reservedBy: null,
-    reservedByName: null,
     reservedAt: null,
     createdAt: '2026-10-10T12:05:00.000Z'
   },
@@ -122,8 +110,6 @@ export const INITIAL_GIFTS: Gift[] = [
     priority: 'muy-deseado',
     visibleTo: ['all'],
     isReserved: false,
-    reservedBy: null,
-    reservedByName: null,
     reservedAt: null,
     createdAt: '2026-10-10T12:06:00.000Z'
   },
@@ -138,8 +124,6 @@ export const INITIAL_GIFTS: Gift[] = [
     priority: 'muy-deseado',
     visibleTo: ['all'],
     isReserved: false,
-    reservedBy: null,
-    reservedByName: null,
     reservedAt: null,
     createdAt: '2026-10-10T12:07:00.000Z'
   },
@@ -154,8 +138,6 @@ export const INITIAL_GIFTS: Gift[] = [
     priority: 'deseado',
     visibleTo: ['all'],
     isReserved: false,
-    reservedBy: null,
-    reservedByName: null,
     reservedAt: null,
     createdAt: '2026-10-10T12:08:00.000Z'
   },
@@ -170,47 +152,31 @@ export const INITIAL_GIFTS: Gift[] = [
     priority: 'ilusion-maxima',
     visibleTo: ['all'],
     isReserved: false,
-    reservedBy: null,
-    reservedByName: null,
     reservedAt: null,
     createdAt: '2026-10-10T12:09:00.000Z'
+  },
+  // Example of a special gift unlocked only for Susana
+  {
+    id: 'regalo-especial-1',
+    name: 'Regalo Sorpresa Exclusivo (Solo Susana)',
+    price: 'Especial',
+    img: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=800&q=80',
+    link: '',
+    descripcion: 'Este deseo especial solo es visible para Susana cuando accede con su clave.',
+    category: 'ambos',
+    priority: 'ilusion-maxima',
+    visibleTo: ['Susana'],
+    isReserved: false,
+    reservedAt: null,
+    createdAt: '2026-10-10T12:10:00.000Z'
   }
 ];
 
-export const DEFAULT_USERS: AppUser[] = [
+export const INITIAL_SPECIAL_USERS: SpecialUser[] = [
   {
-    uid: 'admin-rafael',
-    username: 'rafael',
-    displayName: 'Rafael (Admin)',
-    role: 'admin',
-    group: 'general'
-  },
-  {
-    uid: 'user-familia',
-    username: 'familia',
-    displayName: 'Familia Querida',
-    role: 'user',
-    group: 'familia'
-  },
-  {
-    uid: 'user-amigos',
-    username: 'amigos',
-    displayName: 'Amigos',
-    role: 'user',
-    group: 'amigos'
-  },
-  {
-    uid: 'user-mama',
-    username: 'mama',
-    displayName: 'Mamá ❤️',
-    role: 'user',
-    group: 'familia'
-  },
-  {
-    uid: 'user-papa',
-    username: 'papa',
-    displayName: 'Papá 👑',
-    role: 'user',
-    group: 'familia'
+    id: 'user-susana',
+    name: 'Susana',
+    password: 'contraseña1.',
+    createdAt: new Date().toISOString()
   }
 ];
