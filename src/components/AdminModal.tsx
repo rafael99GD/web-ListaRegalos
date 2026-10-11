@@ -6,7 +6,6 @@ import {
   Trash2, 
   Edit3, 
   Save, 
-  RotateCcw, 
   ShieldCheck, 
   Layers, 
   FileText, 
@@ -295,7 +294,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={giftForm.name}
                         onChange={(e) => setGiftForm({ ...giftForm, name: e.target.value })}
                         placeholder="ej: Lámpara Hollow Knight, Juego X..."
-                        className="w-full px-3 py-2 bg-black/40 border border-festive-pine rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-festive-gold"
+                        className="w-full px-3 py-2 bg-black/40 border border-festive-pine rounded-xl text-[16px] sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-festive-gold"
                       />
                     </div>
 
@@ -307,7 +306,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={giftForm.price}
                         onChange={(e) => setGiftForm({ ...giftForm, price: e.target.value })}
                         placeholder="ej: 29.99€ o 50€ - 80€"
-                        className="w-full px-3 py-2 bg-black/40 border border-festive-pine rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-festive-gold"
+                        className="w-full px-3 py-2 bg-black/40 border border-festive-pine rounded-xl text-[16px] sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-festive-gold"
                       />
                     </div>
 
@@ -318,7 +317,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={giftForm.link}
                         onChange={(e) => setGiftForm({ ...giftForm, link: e.target.value })}
                         placeholder="https://amazon.es/... (opcional)"
-                        className="w-full px-3 py-2 bg-black/40 border border-festive-pine rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-festive-gold"
+                        className="w-full px-3 py-2 bg-black/40 border border-festive-pine rounded-xl text-[16px] sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-festive-gold"
                       />
                     </div>
 
@@ -329,7 +328,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                         value={giftForm.img}
                         onChange={(e) => setGiftForm({ ...giftForm, img: e.target.value })}
                         placeholder="https://... imagen o foto del regalo"
-                        className="w-full px-3 py-2 bg-black/40 border border-festive-pine rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-festive-gold"
+                        className="w-full px-3 py-2 bg-black/40 border border-festive-pine rounded-xl text-[16px] sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-festive-gold"
                       />
                     </div>
 
@@ -338,7 +337,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       <select
                         value={giftForm.category}
                         onChange={(e) => setGiftForm({ ...giftForm, category: e.target.value as GiftCategory })}
-                        className="w-full px-3 py-2 bg-black/40 border border-festive-pine rounded-xl text-sm text-slate-100 focus:outline-none focus:border-festive-gold"
+                        className="w-full px-3 py-2 bg-black/40 border border-festive-pine rounded-xl text-[16px] sm:text-sm text-slate-100 focus:outline-none focus:border-festive-gold"
                       >
                         <option value="ambos">✨ Navidad & Cumpleaños (Ambos)</option>
                         <option value="navidad">🎄 Solo Reyes / Navidad</option>
@@ -351,7 +350,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       <select
                         value={giftForm.priority}
                         onChange={(e) => setGiftForm({ ...giftForm, priority: e.target.value as GiftPriority })}
-                        className="w-full px-3 py-2 bg-black/40 border border-festive-pine rounded-xl text-sm text-slate-100 focus:outline-none focus:border-festive-gold"
+                        className="w-full px-3 py-2 bg-black/40 border border-festive-pine rounded-xl text-[16px] sm:text-sm text-slate-100 focus:outline-none focus:border-festive-gold"
                       >
                         <option value="deseado">Deseado</option>
                         <option value="muy-deseado">Muy deseado ⭐</option>
@@ -360,13 +359,13 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     </div>
 
                     <div className="sm:col-span-2 space-y-1">
-                      <label className="text-xs font-semibold text-slate-300">Descripción o notas personales:</label>
+                      <label className="text-xs font-semibold text-slate-300">Descripción o notas personales (opcional):</label>
                       <textarea
                         rows={2}
                         value={giftForm.descripcion}
                         onChange={(e) => setGiftForm({ ...giftForm, descripcion: e.target.value })}
                         placeholder="Talla, color, por qué te gusta o detalles para quien te lo regale..."
-                        className="w-full px-3 py-2 bg-black/40 border border-festive-pine rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-festive-gold"
+                        className="w-full px-3 py-2 bg-black/40 border border-festive-pine rounded-xl text-[16px] sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-festive-gold"
                       />
                     </div>
 
@@ -438,18 +437,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                     <h4 className="font-serif font-bold text-base text-slate-200">
                       Regalos en la lista ({gifts.length}):
                     </h4>
-                    <button
-                      onClick={async () => {
-                        if (window.confirm('¿Restaurar los regalos iniciales con los productos del año pasado?')) {
-                          sounds.playClick();
-                          await giftService.resetToDefaults();
-                        }
-                      }}
-                      className="text-xs text-festive-goldLight hover:underline flex items-center gap-1"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      <span>Restaurar lista del año pasado</span>
-                    </button>
                   </div>
 
                   <div className="space-y-2.5">

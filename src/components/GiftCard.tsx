@@ -105,9 +105,11 @@ export const GiftCard: React.FC<GiftCardProps> = ({
               <h3 className="font-serif font-bold text-base sm:text-lg text-slate-100 line-clamp-1 group-hover:text-festive-goldLight transition-colors">
                 {gift.name}
               </h3>
-              <p className="text-xs text-slate-400 line-clamp-2 mt-1 min-h-[32px] leading-relaxed">
-                {gift.descripcion || 'Sin descripción adicional. ¡Consulta el enlace para ver todos los detalles!'}
-              </p>
+              {gift.descripcion && gift.descripcion.trim() ? (
+                <p className="text-xs text-slate-400 line-clamp-2 mt-1 min-h-[32px] leading-relaxed">
+                  {gift.descripcion}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -154,7 +156,11 @@ export const GiftCard: React.FC<GiftCardProps> = ({
             ) : isAdmin ? (
               /* ONLY ADMIN CAN RESTORE */
               <button
-                onClick={() => { sounds.playClick(); onUnreserveClick(gift); }}
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  sounds.playClick(); 
+                  onUnreserveClick(gift); 
+                }}
                 className="w-full py-2 px-3 rounded-xl bg-festive-wine/50 hover:bg-festive-wine text-festive-goldLight font-medium text-xs border border-festive-ruby/50 flex items-center justify-center gap-1.5 transition-colors shadow-sm"
               >
                 <Undo2 className="w-3.5 h-3.5" />
@@ -197,14 +203,16 @@ export const GiftCard: React.FC<GiftCardProps> = ({
               </p>
             </div>
 
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-festive-goldLight uppercase tracking-wider">
-                Notas y por qué lo quiero:
-              </p>
-              <div className="bg-festive-forest/70 p-3 rounded-xl border border-festive-pine text-xs text-slate-300 leading-relaxed max-h-36 overflow-y-auto">
-                {gift.descripcion || 'Sin notas adicionales. ¡Cualquier sorpresa es bienvenida!'}
+            {gift.descripcion && gift.descripcion.trim() ? (
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold text-festive-goldLight uppercase tracking-wider">
+                  Notas y por qué lo quiero:
+                </p>
+                <div className="bg-festive-forest/70 p-3 rounded-xl border border-festive-pine text-xs text-slate-300 leading-relaxed max-h-36 overflow-y-auto">
+                  {gift.descripcion}
+                </div>
               </div>
-            </div>
+            ) : null}
 
             {isAdmin && (
               <div className="text-[11px] text-slate-400 bg-black/30 p-2 rounded-lg border border-white/5 space-y-1">

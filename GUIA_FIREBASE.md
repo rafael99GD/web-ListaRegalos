@@ -31,28 +31,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Función de seguridad: Verifica que solo se modifiquen los campos de reserva y no se alteren datos del producto
-    function isOnlyMarkingAsReserved() {
-      let diff = request.resource.data.diff(resource.data);
-      return diff.affectedKeys().hasOnly(['isReserved', 'reservedAt', 'updatedAt'])
-        && resource.data.isReserved == false
-        && request.resource.data.isReserved == true;
-    }
-
     // Reglas para la colección de REGALOS
     match /gifts/{giftId} {
-      // 1. Lectura pública (todos pueden ver los deseos)
       allow read: if true;
-
-      // 2. Cualquier persona puede marcar un regalo como COMPRADO si no estaba comprado antes.
-      // Nadie puede desmarcarlo ni tocar precios ni títulos.
-      allow update: if isOnlyMarkingAsReserved() || request.auth != null;
-
-      // 3. Crear o eliminar regalos
-      allow create, delete: if true;
+      allow create, update, delete: if true;
     }
 
-    // Reglas para la CARTA personal
+    // Reglas para la CARTA personal y CONFIGURACIÓN
     match /config/{configId} {
       allow read: if true;
       allow write: if true;

@@ -126,7 +126,7 @@ export const GiftDeck: React.FC<GiftDeckProps> = ({
       </div>
 
       {/* Stacked Cards Area */}
-      <div className="relative w-full h-[470px] sm:h-[510px] perspective-1000">
+      <div className="relative w-full h-[450px] sm:h-[490px] perspective-1000">
         
         {/* Background Ghost Card */}
         {gifts.length > 1 && nextGift && (
@@ -148,11 +148,11 @@ export const GiftDeck: React.FC<GiftDeckProps> = ({
           drag="x"
           dragConstraints={{ left: 0, right: 0 }}
           onDragEnd={handleDragEnd}
-          animate={{ scale: 1, y: 0 }}
+          animate={{ scale: 1, y: 0, opacity: 1 }}
           initial={{ scale: 0.95, y: 15, opacity: 0 }}
           exit={{ scale: 0.9, opacity: 0 }}
           transition={{ duration: 0.25 }}
-          className={`absolute inset-0 w-full h-full rounded-3xl cursor-grab active:cursor-grabbing transform-style-3d shadow-card-holiday border border-festive-pine/80 bg-festive-card ${
+          className={`absolute inset-0 w-full h-full rounded-3xl cursor-grab active:cursor-grabbing transform-style-3d shadow-card-holiday border border-festive-pine/80 bg-festive-card touch-pan-y ${
             isFlipped ? 'rotate-y-180' : ''
           }`}
         >
@@ -222,12 +222,14 @@ export const GiftDeck: React.FC<GiftDeckProps> = ({
 
               {/* Title & snippet */}
               <div className="pt-1">
-                <h3 className="font-serif font-bold text-xl sm:text-2xl text-slate-100 leading-tight">
+                <h3 className="font-serif font-bold text-lg sm:text-2xl text-slate-100 leading-tight">
                   {currentGift.name}
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-300 line-clamp-2 mt-1.5 leading-relaxed font-light">
-                  {currentGift.descripcion || 'Toca el botón girar para leer más detalles o ver el enlace.'}
-                </p>
+                {currentGift.descripcion && currentGift.descripcion.trim() ? (
+                  <p className="text-xs sm:text-sm text-slate-300 line-clamp-2 mt-1.5 leading-relaxed font-light">
+                    {currentGift.descripcion}
+                  </p>
+                ) : null}
               </div>
             </div>
 
@@ -288,14 +290,16 @@ export const GiftDeck: React.FC<GiftDeckProps> = ({
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-festive-goldLight uppercase tracking-wider">
-                  Notas personales:
-                </p>
-                <div className="bg-festive-forest/70 p-4 rounded-2xl border border-festive-pine text-sm text-slate-300 leading-relaxed max-h-48 overflow-y-auto">
-                  {currentGift.descripcion || 'Sin notas adicionales.'}
+              {currentGift.descripcion && currentGift.descripcion.trim() ? (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold text-festive-goldLight uppercase tracking-wider">
+                    Notas personales:
+                  </p>
+                  <div className="bg-festive-forest/70 p-3 rounded-2xl border border-festive-pine text-xs sm:text-sm text-slate-300 leading-relaxed max-h-40 overflow-y-auto">
+                    {currentGift.descripcion}
+                  </div>
                 </div>
-              </div>
+              ) : null}
 
               {isAdmin && (
                 <div className="text-xs text-slate-400 bg-black/40 p-2.5 rounded-xl border border-white/5 space-y-1">

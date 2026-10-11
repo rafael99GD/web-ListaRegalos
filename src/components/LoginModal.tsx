@@ -90,7 +90,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="ej: Susana, Rafael..."
                 autoComplete="name"
-                className="w-full px-4 py-2.5 bg-festive-forest border border-festive-pine rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-festive-gold"
+                className="w-full px-4 py-2.5 bg-festive-forest border border-festive-pine rounded-xl text-[16px] sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-festive-gold"
               />
             </div>
 
@@ -105,7 +105,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Tu clave secreta..."
                 autoComplete="current-password"
-                className="w-full px-4 py-2.5 bg-festive-forest border border-festive-pine rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-festive-gold"
+                className="w-full px-4 py-2.5 bg-festive-forest border border-festive-pine rounded-xl text-[16px] sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-festive-gold"
               />
             </div>
 

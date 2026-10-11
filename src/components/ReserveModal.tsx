@@ -144,11 +144,11 @@ export const ReserveModal: React.FC<ReserveModalProps> = ({
           )}
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="flex flex-col-reverse xs:flex-row items-stretch xs:items-center justify-end gap-2 sm:gap-3 pt-2">
             <button
               onClick={() => { sounds.playClick(); onClose(); }}
               disabled={submitting}
-              className="px-4 py-2.5 rounded-xl bg-festive-forest hover:bg-festive-pine text-slate-300 hover:text-white text-xs font-medium transition-colors"
+              className="w-full xs:w-auto px-4 py-2.5 rounded-xl bg-festive-forest hover:bg-festive-pine text-slate-300 hover:text-white text-xs font-medium transition-colors text-center"
             >
               Cancelar
             </button>
@@ -156,7 +156,7 @@ export const ReserveModal: React.FC<ReserveModalProps> = ({
             <button
               onClick={handleAction}
               disabled={submitting}
-              className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg transition-all ${
+              className={`w-full xs:w-auto px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${
                 mode === 'reserve'
                   ? 'bg-gradient-to-r from-festive-cranberry to-festive-wine text-white border border-festive-gold hover:scale-102 active:scale-98 shadow-glow-ruby'
                   : 'bg-festive-wine hover:bg-festive-ruby text-white border border-festive-ruby/40'

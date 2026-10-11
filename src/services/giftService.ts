@@ -5,29 +5,28 @@ import {
   setDoc, 
   updateDoc, 
   deleteDoc, 
-  serverTimestamp,
   query,
   orderBy
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../config/firebase';
 import type { Gift, LetterConfig, SpecialUser } from '../types';
-import { INITIAL_GIFTS, INITIAL_LETTER, INITIAL_SPECIAL_USERS } from '../data/initialData';
+import { INITIAL_LETTER, INITIAL_SPECIAL_USERS } from '../data/initialData';
 
-const LOCAL_STORAGE_GIFTS_KEY = 'lista_regalos_items_v3';
-const LOCAL_STORAGE_LETTER_KEY = 'lista_regalos_letter_v3';
-const LOCAL_STORAGE_SPECIAL_USERS_KEY = 'lista_regalos_special_users_v3';
+const LOCAL_STORAGE_GIFTS_KEY = 'lista_regalos_items_v4';
+const LOCAL_STORAGE_LETTER_KEY = 'lista_regalos_letter_v4';
+const LOCAL_STORAGE_SPECIAL_USERS_KEY = 'lista_regalos_special_users_v4';
 
 // Helper for local storage
 const getLocalGifts = (): Gift[] => {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_GIFTS_KEY);
     if (!raw) {
-      localStorage.setItem(LOCAL_STORAGE_GIFTS_KEY, JSON.stringify(INITIAL_GIFTS));
-      return INITIAL_GIFTS;
+      localStorage.setItem(LOCAL_STORAGE_GIFTS_KEY, JSON.stringify([]));
+      return [];
     }
     return JSON.parse(raw);
   } catch {
-    return INITIAL_GIFTS;
+    return [];
   }
 };
 
@@ -45,9 +44,7 @@ export const giftService = {
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
           if (snapshot.empty) {
-            console.log('🌱 [Firestore] Colección vacía. Sembrando regalos iniciales...');
-            this.seedFirestore();
-            onGiftsUpdated(INITIAL_GIFTS);
+            onGiftsUpdated([]);
           } else {
             const items: Gift[] = [];
             snapshot.forEach((docSnap) => {
@@ -72,26 +69,14 @@ export const giftService = {
     return () => window.removeEventListener('storage', handler);
   },
 
-  // Seed Firestore on first boot
+  // Seed letter only if needed
   async seedFirestore() {
     if (!isFirebaseConfigured || !db) return;
     try {
-      for (const gift of INITIAL_GIFTS) {
-        const docRef = doc(db, 'gifts', gift.id);
-        await setDoc(docRef, {
-          ...gift,
-          updatedAt: serverTimestamp()
-        });
-      }
       const letterDoc = doc(db, 'config', 'letter');
       await setDoc(letterDoc, INITIAL_LETTER);
-
-      for (const user of INITIAL_SPECIAL_USERS) {
-        const uDoc = doc(db, 'special_users', user.id);
-        await setDoc(uDoc, user);
-      }
     } catch (e) {
-      console.warn('Error sembrando datos en Firestore:', e);
+      console.warn('Error inicializando carta en Firestore:', e);
     }
   },
 
@@ -192,15 +177,6 @@ export const giftService = {
     window.dispatchEvent(new Event('storage'));
   },
 
-  // Restore defaults
-  async resetToDefaults(): Promise<void> {
-    if (isFirebaseConfigured && db) {
-      await this.seedFirestore();
-      return;
-    }
-    saveLocalGifts(INITIAL_GIFTS);
-    window.dispatchEvent(new Event('storage'));
-  },
 
   // Letter Config
   subscribeLetter(onLetterUpdated: (letter: LetterConfig) => void): () => void {

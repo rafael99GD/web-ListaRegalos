@@ -28,9 +28,9 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
 }) => {
 
   return (
-    <div className="w-full max-w-5xl mx-auto mb-6 px-4 space-y-3.5">
+    <div className="w-full max-w-5xl mx-auto mb-4 sm:mb-6 px-2.5 sm:px-4 space-y-2.5 sm:space-y-3.5">
       {/* Search and counters */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
         {/* Search Input */}
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -39,7 +39,7 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar regalo, tienda o detalle..."
-            className="w-full pl-10 pr-4 py-2.5 bg-festive-forest/70 border border-festive-pine rounded-xl text-sm text-slate-200 placeholder-slate-400 focus:outline-none focus:border-festive-gold/60 focus:ring-1 focus:ring-festive-gold/40 transition-all"
+            className="w-full pl-10 pr-8 py-2 sm:py-2.5 bg-festive-forest/70 border border-festive-pine rounded-xl text-[16px] sm:text-sm text-slate-200 placeholder-slate-400 focus:outline-none focus:border-festive-gold/60 focus:ring-1 focus:ring-festive-gold/40 transition-all"
           />
           {searchQuery && (
             <button

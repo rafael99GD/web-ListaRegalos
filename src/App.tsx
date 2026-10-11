@@ -29,7 +29,7 @@ export const AppContent: React.FC = () => {
   const [viewMode, setViewMode] = useState<'deck' | 'grid'>(() => {
     return (localStorage.getItem(VIEW_MODE_KEY) as 'deck' | 'grid') || 'deck';
   });
-  const [snowActive, setSnowActive] = useState<boolean>(true);
+  const [snowActive, setSnowActive] = useState<boolean>(false);
   const [soundActive, setSoundActive] = useState<boolean>(true);
 
   // Filters
