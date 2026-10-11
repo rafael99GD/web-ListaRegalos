@@ -9,6 +9,8 @@ import { IntroLetterModal } from './components/IntroLetterModal';
 import { ReserveModal } from './components/ReserveModal';
 import { LoginModal } from './components/LoginModal';
 import { AdminModal } from './components/AdminModal';
+import { MobileBottomNav } from './components/MobileBottomNav';
+import { MobileFilterSheet } from './components/MobileFilterSheet';
 import type { Gift, LetterConfig, GiftCategory } from './types';
 import { INITIAL_LETTER } from './data/initialData';
 import { giftService } from './services/giftService';
@@ -41,6 +43,7 @@ export const AppContent: React.FC = () => {
   const [letterOpen, setLetterOpen] = useState<boolean>(false);
   const [adminOpen, setAdminOpen] = useState<boolean>(false);
   const [loginOpen, setLoginOpen] = useState<boolean>(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState<boolean>(false);
   const [reserveModalState, setReserveModalState] = useState<{
     gift: Gift;
     mode: 'reserve' | 'unreserve';
@@ -144,6 +147,8 @@ export const AppContent: React.FC = () => {
     setLetter(newLetter);
   };
 
+  const isFiltered = Boolean(selectedCategory !== 'all' || statusFilter !== 'all' || searchQuery.trim() !== '');
+
   return (
     <div className="relative min-h-screen flex flex-col justify-between selection:bg-festive-wine selection:text-white">
       {/* Background Snow Particles */}
@@ -162,21 +167,21 @@ export const AppContent: React.FC = () => {
         onOpenLogin={() => setLoginOpen(true)}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8">
+      {/* Main Content Area (extra bottom padding on mobile for floating bottom nav) */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 pt-4 sm:pt-8 pb-28 md:pb-12">
         
         {/* Welcome Banner / Greeting Pill */}
-        <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8 space-y-2">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-festive-forest/80 border border-festive-gold/30 text-festive-goldLight text-xs font-serif tracking-wider shadow-inner">
-            <Sparkles className="w-3.5 h-3.5 text-festive-gold animate-pulse" />
+        <div className="text-center max-w-2xl mx-auto mb-4 sm:mb-8 space-y-1.5 sm:space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-festive-forest/80 border border-festive-gold/30 text-festive-goldLight text-[11px] sm:text-xs font-serif tracking-wider shadow-inner">
+            <Sparkles className="w-3 h-3 text-festive-gold animate-pulse" />
             <span>{letter.temporada || 'Lista de Deseos 2026'}</span>
           </div>
 
-          <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold text-slate-100 tracking-tight leading-tight">
+          <h1 className="font-serif text-2xl sm:text-4xl md:text-5xl font-bold text-slate-100 tracking-tight leading-tight">
             {letter.titulo || 'Mis Deseos de Reyes & Cumpleaños'}
           </h1>
 
-          <p className="text-sm sm:text-base text-slate-300 font-light max-w-lg mx-auto">
+          <p className="text-xs sm:text-base text-slate-300 font-light max-w-lg mx-auto">
             {session 
               ? (session.isAdmin 
                   ? '👑 Modo Administrador activo: Puedes ver todos los deseos, añadir nuevos y reactivar regalos.' 
@@ -185,17 +190,35 @@ export const AppContent: React.FC = () => {
           </p>
         </div>
 
-        {/* Filter Controls Bar */}
-        <FiltersBar
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          totalCount={gifts.length}
-          filteredCount={filteredGifts.length}
-        />
+        {/* Filter Controls Bar - Desktop Version */}
+        <div className="hidden md:block">
+          <FiltersBar
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            totalCount={gifts.length}
+            filteredCount={filteredGifts.length}
+          />
+        </div>
+
+        {/* Mobile Quick Filter Status Pill */}
+        {isFiltered && (
+          <div className="flex md:hidden items-center justify-between px-3 py-1.5 mb-4 bg-festive-forest/80 border border-festive-gold/30 rounded-xl text-xs">
+            <div className="flex items-center gap-1.5 text-festive-goldLight font-medium">
+              <span className="w-2 h-2 rounded-full bg-festive-gold animate-pulse" />
+              <span>Filtrando: {filteredGifts.length} de {gifts.length}</span>
+            </div>
+            <button
+              onClick={() => setMobileFiltersOpen(true)}
+              className="text-festive-gold underline text-xs font-semibold px-1"
+            >
+              Ajustar filtros
+            </button>
+          </div>
+        )}
 
         {/* Dynamic Wishlist View (Deck Tinder vs Boutique Grid) */}
         {viewMode === 'deck' ? (
@@ -214,7 +237,7 @@ export const AppContent: React.FC = () => {
       </main>
 
       {/* Festive Footer */}
-      <footer className="w-full border-t border-festive-pine/60 bg-festive-dark/90 py-8 px-4 text-center text-xs text-slate-400 space-y-2">
+      <footer className="w-full border-t border-festive-pine/60 bg-festive-dark/90 py-8 px-4 pb-28 md:pb-8 text-center text-xs text-slate-400 space-y-2">
         <p className="flex items-center justify-center gap-1.5 text-slate-300">
           <span>Hecho con</span>
           <Heart className="w-3.5 h-3.5 text-festive-ruby fill-festive-ruby" />
@@ -224,6 +247,31 @@ export const AppContent: React.FC = () => {
           Alojado en GitHub Pages • Sincronizado en tiempo real con Firebase
         </p>
       </footer>
+
+      {/* Mobile App Bottom Navigation Bar */}
+      <MobileBottomNav
+        viewMode={viewMode}
+        setViewMode={handleSetViewMode}
+        onOpenFilters={() => setMobileFiltersOpen(true)}
+        isFiltered={isFiltered}
+        onOpenLetter={() => setLetterOpen(true)}
+        onOpenAdmin={() => setAdminOpen(true)}
+        onOpenLogin={() => setLoginOpen(true)}
+      />
+
+      {/* Mobile Slide-Up Filter & Search Sheet */}
+      <MobileFilterSheet
+        isOpen={mobileFiltersOpen}
+        onClose={() => setMobileFiltersOpen(false)}
+        selectedCategory={selectedCategory}
+        setSelectedCategory={setSelectedCategory}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        totalCount={gifts.length}
+        filteredCount={filteredGifts.length}
+      />
 
       {/* Interactive Envelope & Greeting Letter Modal */}
       <IntroLetterModal
