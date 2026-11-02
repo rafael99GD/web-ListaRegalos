@@ -1,15 +1,24 @@
 import React from 'react';
 import { Search, Sparkles, Gift } from 'lucide-react';
-import type { GiftCategory } from '../types';
+import type { GiftCategory, GiftPriority } from '../types';
 import { sounds } from '../utils/audio';
 
 export type StatusFilter = 'all' | 'available' | 'reserved';
+export type PriorityFilter = 'all' | GiftPriority;
+
+export const PRIORITY_OPTIONS: { value: GiftPriority; label: string }[] = [
+  { value: 'ilusion-maxima', label: '🔥 Ilusión Máxima' },
+  { value: 'muy-deseado', label: '⭐ Muy deseado' },
+  { value: 'deseado', label: '🎁 Deseado' },
+];
 
 interface FiltersBarProps {
   selectedCategory: GiftCategory | 'all';
   setSelectedCategory: (cat: GiftCategory | 'all') => void;
   statusFilter: StatusFilter;
   setStatusFilter: (status: StatusFilter) => void;
+  priorityFilter: PriorityFilter;
+  setPriorityFilter: (priority: PriorityFilter) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   totalCount: number;
@@ -21,6 +30,8 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
   setSelectedCategory,
   statusFilter,
   setStatusFilter,
+  priorityFilter,
+  setPriorityFilter,
   searchQuery,
   setSearchQuery,
   totalCount,
@@ -131,6 +142,34 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
             <span>Ya reservados</span>
           </button>
         </div>
+      </div>
+
+      {/* Priority (interest level) Pills */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-xs text-slate-400 mr-1">Interés:</span>
+        <button
+          onClick={() => { sounds.playClick(); setPriorityFilter('all'); }}
+          className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            priorityFilter === 'all'
+              ? 'bg-festive-pine text-festive-goldLight font-medium border border-festive-gold/30'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          Todos
+        </button>
+        {PRIORITY_OPTIONS.map(({ value, label }) => (
+          <button
+            key={value}
+            onClick={() => { sounds.playClick(); setPriorityFilter(value); }}
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              priorityFilter === value
+                ? 'bg-festive-wine text-festive-goldLight font-semibold border border-festive-gold/40'
+                : 'bg-festive-forest/60 text-slate-300 hover:bg-festive-pine/70 border border-festive-pine/50'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Navbar } from './components/Navbar';
 import { SnowEffect } from './components/SnowEffect';
 import { FiltersBar } from './components/FiltersBar';
-import type { StatusFilter } from './components/FiltersBar';
+import type { StatusFilter, PriorityFilter } from './components/FiltersBar';
 import { GiftDeck } from './components/GiftDeck';
 import { GiftGrid } from './components/GiftGrid';
 import { IntroLetterModal } from './components/IntroLetterModal';
@@ -37,6 +37,7 @@ export const AppContent: React.FC = () => {
   // Filters
   const [selectedCategory, setSelectedCategory] = useState<GiftCategory | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Modals
@@ -118,6 +119,11 @@ export const AppContent: React.FC = () => {
         return false;
       }
 
+      // 3b. PRIORITY (interest level):
+      if (priorityFilter !== 'all' && gift.priority !== priorityFilter) {
+        return false;
+      }
+
       // 4. SEARCH QUERY:
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
@@ -131,7 +137,7 @@ export const AppContent: React.FC = () => {
 
       return true;
     }).sort((a, b) => (priorityRank[b.priority] ?? 0) - (priorityRank[a.priority] ?? 0));
-  }, [gifts, isAdmin, session, selectedCategory, statusFilter, searchQuery]);
+  }, [gifts, isAdmin, session, selectedCategory, statusFilter, priorityFilter, searchQuery]);
 
   const handleOpenReserve = (gift: Gift) => {
     setReserveModalState({ gift, mode: 'reserve' });
@@ -154,7 +160,7 @@ export const AppContent: React.FC = () => {
     setLetter(newLetter);
   };
 
-  const isFiltered = Boolean(selectedCategory !== 'all' || statusFilter !== 'all' || searchQuery.trim() !== '');
+  const isFiltered = Boolean(selectedCategory !== 'all' || statusFilter !== 'all' || priorityFilter !== 'all' || searchQuery.trim() !== '');
 
   return (
     <div className="relative min-h-screen flex flex-col justify-between selection:bg-festive-wine selection:text-white">
@@ -204,6 +210,8 @@ export const AppContent: React.FC = () => {
             setSelectedCategory={setSelectedCategory}
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
+            priorityFilter={priorityFilter}
+            setPriorityFilter={setPriorityFilter}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             totalCount={gifts.length}
@@ -274,6 +282,8 @@ export const AppContent: React.FC = () => {
         setSelectedCategory={setSelectedCategory}
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
+        priorityFilter={priorityFilter}
+        setPriorityFilter={setPriorityFilter}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         totalCount={gifts.length}

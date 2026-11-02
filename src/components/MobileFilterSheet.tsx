@@ -2,7 +2,8 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Sparkles, RotateCcw, Check } from 'lucide-react';
 import type { GiftCategory } from '../types';
-import type { StatusFilter } from './FiltersBar';
+import type { StatusFilter, PriorityFilter } from './FiltersBar';
+import { PRIORITY_OPTIONS } from './FiltersBar';
 import { sounds } from '../utils/audio';
 
 interface MobileFilterSheetProps {
@@ -12,6 +13,8 @@ interface MobileFilterSheetProps {
   setSelectedCategory: (cat: GiftCategory | 'all') => void;
   statusFilter: StatusFilter;
   setStatusFilter: (status: StatusFilter) => void;
+  priorityFilter: PriorityFilter;
+  setPriorityFilter: (priority: PriorityFilter) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   totalCount: number;
@@ -25,17 +28,20 @@ export const MobileFilterSheet: React.FC<MobileFilterSheetProps> = ({
   setSelectedCategory,
   statusFilter,
   setStatusFilter,
+  priorityFilter,
+  setPriorityFilter,
   searchQuery,
   setSearchQuery,
   totalCount,
   filteredCount,
 }) => {
-  const isFiltered = selectedCategory !== 'all' || statusFilter !== 'all' || searchQuery.trim() !== '';
+  const isFiltered = selectedCategory !== 'all' || statusFilter !== 'all' || priorityFilter !== 'all' || searchQuery.trim() !== '';
 
   const handleReset = () => {
     sounds.playClick();
     setSelectedCategory('all');
     setStatusFilter('all');
+    setPriorityFilter('all');
     setSearchQuery('');
   };
 
@@ -189,6 +195,38 @@ export const MobileFilterSheet: React.FC<MobileFilterSheetProps> = ({
                   >
                     Comprados
                   </button>
+                </div>
+              </div>
+
+              {/* Nivel de interés */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                  Nivel de interés
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => { sounds.playClick(); setPriorityFilter('all'); }}
+                    className={`py-2 px-2 rounded-xl text-xs font-medium text-center transition-all ${
+                      priorityFilter === 'all'
+                        ? 'bg-festive-emerald text-white font-bold shadow-sm'
+                        : 'bg-festive-forest/60 text-slate-400 border border-festive-pine/50'
+                    }`}
+                  >
+                    Todos
+                  </button>
+                  {PRIORITY_OPTIONS.map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => { sounds.playClick(); setPriorityFilter(value); }}
+                      className={`py-2 px-2 rounded-xl text-xs font-medium text-center transition-all ${
+                        priorityFilter === value
+                          ? 'bg-festive-wine text-white font-bold shadow-sm border border-festive-ruby/40'
+                          : 'bg-festive-forest/60 text-slate-400 border border-festive-pine/50'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
