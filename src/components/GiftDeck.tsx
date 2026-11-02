@@ -42,11 +42,19 @@ export const GiftDeck: React.FC<GiftDeckProps> = ({
 
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-15, 15]);
-  const opacityLike = useTransform(x, [50, 150], [0, 1]);
-  const opacityPass = useTransform(x, [-150, -50], [1, 0]);
+  const opacityLike = useTransform(x, [15, 60], [0, 1]);
+  const opacityPass = useTransform(x, [-60, -15], [1, 0]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't hijack keys while the user is typing in a form field
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target.tagName))
+      ) {
+        return;
+      }
       if (e.key === 'ArrowRight') {
         handleNext();
       } else if (e.key === 'ArrowLeft') {
@@ -76,14 +84,14 @@ export const GiftDeck: React.FC<GiftDeckProps> = ({
   };
 
   const handleDragEnd = (_: unknown, info: { offset: { x: number }; velocity: { x: number } }) => {
-    const swipeThreshold = 100;
-    if (info.offset.x > swipeThreshold || info.velocity.x > 500) {
+    const swipeThreshold = 60;
+    if (info.offset.x > swipeThreshold || info.velocity.x > 400) {
       if (currentGift && !currentGift.isReserved) {
         sounds.playChime();
         onReserveClick(currentGift);
       }
       handleNext();
-    } else if (info.offset.x < -swipeThreshold || info.velocity.x < -500) {
+    } else if (info.offset.x < -swipeThreshold || info.velocity.x < -400) {
       handleNext();
     }
   };
@@ -146,7 +154,7 @@ export const GiftDeck: React.FC<GiftDeckProps> = ({
           key={currentGift.id + currentIndex}
           style={{ x, rotate }}
           drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
+          dragSnapToOrigin
           onDragEnd={handleDragEnd}
           animate={{ scale: 1, y: 0, opacity: 1 }}
           initial={{ scale: 0.95, y: 15, opacity: 0 }}

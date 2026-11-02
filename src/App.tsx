@@ -11,7 +11,7 @@ import { LoginModal } from './components/LoginModal';
 import { AdminModal } from './components/AdminModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { MobileFilterSheet } from './components/MobileFilterSheet';
-import type { Gift, LetterConfig, GiftCategory } from './types';
+import type { Gift, LetterConfig, GiftCategory, GiftPriority } from './types';
 import { INITIAL_LETTER } from './data/initialData';
 import { giftService } from './services/giftService';
 import { useAuth } from './context/AuthContext';
@@ -80,7 +80,14 @@ export const AppContent: React.FC = () => {
   // 2. Category
   // 3. Status (Available / Reserved)
   // 4. Search query
+  // Results are ordered by priority (intensity), highest first.
   const filteredGifts = useMemo(() => {
+    const priorityRank: Record<GiftPriority, number> = {
+      'ilusion-maxima': 3,
+      'muy-deseado': 2,
+      'deseado': 1,
+    };
+
     return gifts.filter((gift) => {
       // 1. VISIBILITY PERMISSION:
       // Admin sees ALL gifts
@@ -123,7 +130,7 @@ export const AppContent: React.FC = () => {
       }
 
       return true;
-    });
+    }).sort((a, b) => (priorityRank[b.priority] ?? 0) - (priorityRank[a.priority] ?? 0));
   }, [gifts, isAdmin, session, selectedCategory, statusFilter, searchQuery]);
 
   const handleOpenReserve = (gift: Gift) => {
